@@ -86,5 +86,24 @@ You will see output similar to this:
 ## ⚙️ Configuration
 
 - **Port**: Default is `8000`. You can change this in `run.py`.
-- **Model**: Default is configured to request `kimi-k2`.
-    - TO change the default model, edit `app/static/app.js` (look for `model: "kimi-k2"`).
+- **Model**: Default is configured to request `llama3.1:70b`.
+    - TO change the default model, edit `app/static/app.js` (look for `model: "..."`).
+
+## 🔄 Updating the Application
+If you have already cloned the repository and want to pull the latest changes:
+
+1.  **Navigate to the folder**:
+    ```bash
+    cd LLMChatbot
+    ```
+
+2.  **Pull the latest code**:
+    ```bash
+    git pull origin main
+    ```
+
+3.  **Restart the server**:
+    Press `Ctrl+C` to stop the running server, then run:
+    ```bash
+    python run.py
+    ```
