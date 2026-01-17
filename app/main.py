@@ -27,7 +27,7 @@ sessions: Dict[str, List[Dict[str, str]]] = {}
 
 class ChatRequest(BaseModel):
     message: str
-    model: str = "llama3.1:70b" 
+    model: str = "llama3.1:8b" 
     role_mode: str = "general" # general, data_engineer
     session_id: Optional[str] = None
 
