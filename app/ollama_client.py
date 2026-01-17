@@ -45,6 +45,25 @@ class OllamaClient:
             logger.error(f"An error occurred: {e}")
             yield f"Error: {str(e)}"
 
+    async def get_models(self):
+        """
+        Fetches the list of available models from Ollama.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{self.base_url}/api/tags")
+                if response.status_code == 200:
+                    data = response.json()
+                    # Extract model names
+                    models = [model["name"] for model in data.get("models", [])]
+                    return models
+                else:
+                    logger.error(f"Failed to fetch models: {response.status_code} {response.text}")
+                    return []
+        except Exception as e:
+            logger.error(f"Error fetching models: {e}")
+            return []
+
     async def check_connection(self):
         """
         Checks if Ollama is reachable.

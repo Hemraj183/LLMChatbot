@@ -50,8 +50,14 @@ async def health_check():
     is_connected = await ollama_client.check_connection()
     return {"status": "ok", "ollama_connected": is_connected}
 
+@app.get("/api/models")
+async def get_models():
+    models = await ollama_client.get_models()
+    return {"models": models}
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
+    print(f"Incoming Chat Request: {request.model} | Mode: {request.role_mode} | Session: {request.session_id}")
     session_id = request.session_id
     
     # Create new session if none provided or invalid

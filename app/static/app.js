@@ -19,6 +19,38 @@ if (!sessionId) {
 const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const modelSelect = document.getElementById('model-select');
+
+// Load models dynamically
+async function loadModels() {
+    try {
+        const response = await fetch('/api/models');
+        const data = await response.json();
+        const models = data.models || [];
+
+        modelSelect.innerHTML = ''; // Clear loading
+
+        if (models.length === 0) {
+            const option = document.createElement('option');
+            option.text = "No models found (Check Ollama)";
+            modelSelect.add(option);
+            return;
+        }
+
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.text = model;
+            // Auto-select llama3.1 if present (preferred)
+            if (model.includes("llama3.1")) option.selected = true;
+            modelSelect.add(option);
+        });
+    } catch (err) {
+        console.error("Failed to load models:", err);
+        modelSelect.innerHTML = '<option>Error loading models</option>';
+    }
+}
+loadModels();
 
 // Auto-resize textarea
 function autoResize(el) {
@@ -121,7 +153,11 @@ async function sendMessage() {
 
     } catch (err) {
         console.error(err);
-        assistantContentDiv.innerHTML = `<p style="color: #ef4444;">Error: ${err.message}</p>`;
+        assistantContentDiv.innerHTML = `
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; color: #fca5a5;">
+                <strong>Error:</strong> ${err.message}<br>
+                <small>Check if Ollama is running and the model is installed.</small>
+            </div>`;
     } finally {
         sendBtn.disabled = false;
         userInput.focus();
