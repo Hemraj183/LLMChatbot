@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+    <!-- Highlight.js for code syntax -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (Optional expansion) -->
+        <!-- <aside class="sidebar">
+            <div class="brand">
+                <i class="ri-robot-2-line"></i> <span>NeuralChat</span>
+            </div>
+            <div class="new-chat-btn" onclick="resetSession()">
+                <i class="ri-add-line"></i> New Chat
+            </div>
+        </aside> -->
+
+        <!-- Main Chat Area -->
+        <main class="chat-interface">
+            <header class="chat-header">
+                <div class="header-content">
+                    <div class="model-info">
+                        <span class="status-dot"></span>
+                        <span id="model-name">Kimi K2 (70B)</span>
+                    </div>
+                    <div class="actions">
+                        <button class="icon-btn" onclick="resetSession()" title="New Chat">
+                            <i class="ri-refresh-line"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="chat-history" class="chat-history">
+                <!-- Welcome Message -->
+                <div class="message assistant">
+                    <div class="avatar"><i class="ri-openai-fill"></i></div>
+                    <div class="content">
+                        <p>Hello! I am your AI assistant running locally on the DGX server. How can I help you with your code today?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea id="user-input" placeholder="Message Kimi..." rows="1" oninput="autoResize(this)"></textarea>
+                    <button id="send-btn" onclick="sendMessage()">
+                        <i class="ri-send-plane-fill"></i>
+                    </button>
+                </div>
+                <div class="disclaimer">
+                    AI can make mistakes. Please verify important information.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
