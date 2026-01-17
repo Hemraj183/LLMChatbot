@@ -1,6 +1,7 @@
-# Multi-User DGX Chatbot
+# AuditPartnership Bot
 
-A premium, web-based chatbot interface interacting with a local Ollama instance. Designed for DGX servers (or any Linux/Windows machine), it supports multiple concurrent users with isolated sessions.
+A premium, web-based chatbot interface interacting with a local Ollama instance on your DGX server.
+Designed for **AuditPartnership**, it supports multiple concurrent users with isolated sessions.
 
 ## Features
 - **Premium UI**: Dark mode, glassmorphism, responsive design with "Stripe-inspired" aesthetics.

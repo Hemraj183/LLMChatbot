@@ -42,7 +42,7 @@ function appendMessage(role, text) {
     avatar.className = 'avatar';
     avatar.innerHTML = role === 'user'
         ? '<i class="ri-user-smile-line"></i>'
-        : '<i class="ri-openai-fill"></i>'; // Or robot icon
+        : '<i class="ri-shield-user-fill"></i>'; // Bot icon
 
     // Content
     const content = document.createElement('div');
@@ -138,9 +138,9 @@ async function resetSession() {
     // visual cleanup
     chatHistory.innerHTML = `
         <div class="message assistant">
-            <div class="avatar"><i class="ri-openai-fill"></i></div>
+            <div class="avatar"><i class="ri-shield-user-fill"></i></div>
             <div class="content">
-                <p>Hello! I am your AI assistant running locally on the DGX server. How can I help you with your code today?</p>
+                <p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p>
             </div>
         </div>
     `;

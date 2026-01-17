@@ -130,6 +130,22 @@ body {
     color: var(--text-primary);
 }
 
+/* Brand */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 2rem;
+}
+
+.on-brand {
+    color: var(--primary-color);
+    font-size: 1.4rem;
+}
+
 /* Chat History */
 .chat-history {
     flex: 1;
