@@ -1,24 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Assistant</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
     <!-- Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
     <!-- Highlight.js for code syntax -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
-    
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Sidebar (Optional expansion) -->
@@ -37,7 +42,18 @@
                 <div class="header-content">
                     <div class="model-info">
                         <span class="status-dot"></span>
-                        <span id="model-name">Kimi K2 (70B)</span>
+
+                        <select id="model-select" class="premium-select">
+                            <option value="llama3.1:70b">Llama 3.1 (70B)</option>
+                            <option value="qwen2.5-coder:32b">Qwen 2.5 Coder (32B)</option>
+                        </select>
+
+                        <div class="divider"></div>
+
+                        <select id="role-select" class="premium-select">
+                            <option value="general">General Assistant</option>
+                            <option value="data_engineer">Data & AI Engineer</option>
+                        </select>
                     </div>
                     <div class="actions">
                         <button class="icon-btn" onclick="resetSession()" title="New Chat">
@@ -52,14 +68,16 @@
                 <div class="message assistant">
                     <div class="avatar"><i class="ri-openai-fill"></i></div>
                     <div class="content">
-                        <p>Hello! I am your AI assistant running locally on the DGX server. How can I help you with your code today?</p>
+                        <p>Hello! I am your AI assistant running locally on the DGX server. How can I help you with your
+                            code today?</p>
                     </div>
                 </div>
             </div>
 
             <div class="chat-input-area">
                 <div class="input-wrapper">
-                    <textarea id="user-input" placeholder="Message Kimi..." rows="1" oninput="autoResize(this)"></textarea>
+                    <textarea id="user-input" placeholder="Message Kimi..." rows="1"
+                        oninput="autoResize(this)"></textarea>
                     <button id="send-btn" onclick="sendMessage()">
                         <i class="ri-send-plane-fill"></i>
                     </button>
@@ -76,4 +94,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="/static/app.js"></script>
 </body>
+
 </html>

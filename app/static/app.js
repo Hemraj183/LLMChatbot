@@ -80,12 +80,16 @@ async function sendMessage() {
     let fullResponse = "";
 
     try {
+        const model = document.getElementById('model-select').value;
+        const role = document.getElementById('role-select').value;
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: text,
-                model: "kimi-k2", // Default from frontend, backend also has fallback
+                model: model,
+                role_mode: role,
                 session_id: sessionId
             })
         });

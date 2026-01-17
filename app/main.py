@@ -30,6 +30,16 @@ class ChatRequest(BaseModel):
     model: str = "kimi-k2" # Default, but frontend should probably send this
     session_id: Optional[str] = None
 
+SYSTEM_PROMPTS = {
+    "general": "You are a helpful AI assistant.",
+    "data_engineer": (
+        "You are an expert Data Engineer and AI Specialist. "
+        "You are highly skilled in Python, Spark, SQL, and Machine Learning pipelines. "
+        "When asked about code, provide efficient, scalable, and production-ready solutions. "
+        "Assume the user is technically competent but needs specific implementation details."
+    )
+}
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -51,18 +61,25 @@ async def chat_endpoint(request: ChatRequest):
         # For simplicity, we assume client generates UUID or we return it. 
         # Actually, better pattern: Client generates UUID on load, sends it.
         # If server doesn't have it, we just initialize it.
-        sessions[session_id] = []
     
     # Append user message
     sessions[session_id].append({"role": "user", "content": request.message})
     
     # Prepare messages history for context
-    # Limit context window if necessary (e.g. last 20 messages)
-    history = sessions[session_id][-20:] 
+    # 1. Get recent history
+    raw_history = sessions[session_id][-20:]
+    
+    # 2. Prepend System Prompt based on mode
+    system_content = SYSTEM_PROMPTS.get(request.role_mode, SYSTEM_PROMPTS["general"])
+    # If using Qwen for coding, we might want to enforce data_engineer prompt if not specified, 
+    # but let's respect the UI selection.
+    
+    messages = [{"role": "system", "content": system_content}] + raw_history
 
     async def response_generator():
         full_response = ""
-        async for chunk in ollama_client.chat_stream(request.model, history):
+        # stream from ollama
+        async for chunk in ollama_client.chat_stream(request.model, messages):
             full_response += chunk
             yield chunk
         

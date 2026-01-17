@@ -24,14 +24,16 @@ curl -fsSL https://ollama.com/install.sh | sh
 **For Windows:**
 Download and install from [Ollama.com](https://ollama.com/download).
 
-### 2. Pull the AI Model
-We recommend the `kimi-k2` model (or `lemma`, `mistral`, etc.) for coding tasks. 
+### 2. Pull the AI Models
+This app is configured to use **Llama 3.1** and **Qwen 2.5 Coder**. You must pull them before running the app.
 
-Run this command in your terminal/command prompt:
+Run these commands in your terminal:
 ```bash
-ollama pull kimi-k2
+ollama pull llama3.1:70b
+ollama pull qwen2.5-coder:32b
 ```
-*(If you want to use a different model, just pull it and update the model name in `app/templates/index.html` or `app/main.py`)*
+
+*(Note: You can swap these for smaller versions like `llama3.1:8b` or `qwen2.5-coder:7b` if your GPU memory is limited, but remember to update `app/templates/index.html` values).*
 
 ### 3. Start Ollama Server
 Ensure the Ollama backend is running:
