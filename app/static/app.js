@@ -60,6 +60,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Functions ---
 
+    // Add copy buttons to code blocks
+    function addCopyButtonsToCodeBlocks(container) {
+        container.querySelectorAll('pre').forEach((pre) => {
+            // Avoid adding multiple copy buttons
+            if (pre.querySelector('.copy-btn')) return;
+
+            const codeBlock = pre.querySelector('code');
+            if (!codeBlock) return;
+
+            const button = document.createElement('button');
+            button.className = 'copy-btn';
+            button.innerHTML = '<i class="ri-clipboard-line"></i>';
+            button.title = 'Copy code';
+
+            button.addEventListener('click', async () => {
+                const code = codeBlock.textContent;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    button.innerHTML = '<i class="ri-check-line"></i>';
+                    button.style.background = 'rgba(34, 197, 94, 0.2)';
+                    button.style.color = '#22c55e';
+
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="ri-clipboard-line"></i>';
+                        button.style.background = '';
+                        button.style.color = '';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                    button.innerHTML = '<i class="ri-error-warning-line"></i>';
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="ri-clipboard-line"></i>';
+                    }, 2000);
+                }
+            });
+
+            pre.style.position = 'relative';
+            pre.appendChild(button);
+        });
+    }
+
+    // --- Functions ---
+
     // Load models dynamically
     async function loadModels() {
         if (!modelSelect) return;
@@ -197,10 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 assistantContentDiv.innerHTML = marked.parse(fullResponse);
 
-                // Highlight code blocks
+                // Highlight code blocks and add copy buttons
                 assistantContentDiv.querySelectorAll('pre code').forEach((block) => {
                     hljs.highlightElement(block);
                 });
+                addCopyButtonsToCodeBlocks(assistantContentDiv);
 
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }

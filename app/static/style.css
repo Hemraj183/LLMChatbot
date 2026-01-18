@@ -280,6 +280,36 @@ body {
     font-size: 0.9rem;
 }
 
+/* Copy Button for Code Blocks */
+.copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    z-index: 1;
+}
+
+.copy-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-primary);
+    transform: scale(1.05);
+}
+
+.copy-btn i {
+    font-size: 1rem;
+}
+
 /* Input Area */
 .chat-input-area {
     padding: 2rem 1rem;
