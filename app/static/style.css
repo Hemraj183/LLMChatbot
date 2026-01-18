@@ -411,6 +411,13 @@ textarea {
     margin-top: 1rem;
 }
 
+.footer-credits {
+    margin-top: 0.75rem;
+    opacity: 0.5;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+}
+
 /* Metrics, Code, and Buttons (from previous steps) */
 .metrics {
     font-size: 0.7rem;
