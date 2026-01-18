@@ -20,8 +20,13 @@ if __name__ == "__main__":
     print(f"  Starting Chatbot Server...")
     print(f"  Access Locally: http://localhost:{port}")
     print(f"  Access on Network: http://{local_ip}:{port}")
+    print(f"")
+    print(f"  [NOTE] If network access fails (e.g. from your phone):")
+    print(f"         1. The issue is likely a FIREWALL blocking port {port}.")
+    print(f"         2. Windows: Run 'fix_firewall.ps1' as Admin.")
+    print(f"         3. Linux/DGX: Allow port {port} (e.g. 'sudo ufw allow {port}').")
+    print(f"")
     print(f"  Ensure Ollama is running: 'ollama serve'")
-    print(f"  Ensure Model is pulled: 'ollama pull kimi-k2' (or your chosen model)")
     print(f"==================================================================\n")
     
     # IMPORTANT: reload=True for dev, but bind to 0.0.0.0 for network access

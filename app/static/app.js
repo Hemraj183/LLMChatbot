@@ -9,178 +9,296 @@ marked.setOptions({
     breaks: true
 });
 
-// State
-let sessionId = localStorage.getItem('sessionId');
-if (!sessionId) {
-    sessionId = crypto.randomUUID();
-    localStorage.setItem('sessionId', sessionId);
-}
-
-const chatHistory = document.getElementById('chat-history');
-const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const modelSelect = document.getElementById('model-select');
-
-// Load models dynamically
-async function loadModels() {
-    try {
-        const response = await fetch('/api/models');
-        const data = await response.json();
-        const models = data.models || [];
-
-        modelSelect.innerHTML = ''; // Clear loading
-
-        if (models.length === 0) {
-            const option = document.createElement('option');
-            option.text = "No models found (Check Ollama)";
-            modelSelect.add(option);
-            return;
+// Markdown configuration
+marked.setOptions({
+    highlight: function (code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
         }
-
-        models.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model;
-            option.text = model;
-            // Auto-select llama3.1 if present (preferred)
-            if (model.includes("llama3.1")) option.selected = true;
-            modelSelect.add(option);
-        });
-    } catch (err) {
-        console.error("Failed to load models:", err);
-        modelSelect.innerHTML = '<option>Error loading models</option>';
-    }
-}
-loadModels();
-
-// Auto-resize textarea
-function autoResize(el) {
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-}
-
-userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
+        return hljs.highlightAuto(code).value;
+    },
+    breaks: true
 });
 
-function appendMessage(role, text) {
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${role}`;
+// Main Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const chatHistory = document.getElementById('chat-history');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const modelSelect = document.getElementById('model-select');
+    const roleSelect = document.getElementById('role-select');
+    const resetBtn = document.querySelector('button[title="New Chat"]'); // Access by attribute
 
-    // Icon
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.innerHTML = role === 'user'
-        ? '<i class="ri-user-smile-line"></i>'
-        : '<i class="ri-shield-user-fill"></i>'; // Bot icon
+    // --- Event Listeners ---
 
-    // Content
-    const content = document.createElement('div');
-    content.className = 'content';
-
-    if (role === 'assistant') {
-        // Initial loading state or empty
-        content.innerHTML = text ? marked.parse(text) : '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-    } else {
-        content.innerText = text; // User text is plain
+    // Send Button
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
     }
 
-    msgDiv.appendChild(avatar);
-    msgDiv.appendChild(content);
-    chatHistory.appendChild(msgDiv);
-
-    // Scroll to bottom
-    chatHistory.scrollTop = chatHistory.scrollHeight;
-
-    return content; // Return content div for updating
-}
-
-async function sendMessage() {
-    const text = userInput.value.trim();
-    if (!text) return;
-
-    // UI Updates
-    userInput.value = '';
-    userInput.style.height = 'auto';
-    sendBtn.disabled = true;
-
-    appendMessage('user', text);
-    const assistantContentDiv = appendMessage('assistant', ''); // Empty initially with loader
-
-    let fullResponse = "";
-
-    try {
-        const model = document.getElementById('model-select').value;
-        const role = document.getElementById('role-select').value;
-
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message: text,
-                model: model,
-                role_mode: role,
-                session_id: sessionId
-            })
+    // Input Keydown (Enter to send)
+    if (userInput) {
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         });
 
-        if (!response.ok) throw new Error('Network response was not ok');
+        // Auto-resize
+        userInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+    // Reset Button
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetSession);
+    }
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+    // --- Functions ---
 
-            const chunk = decoder.decode(value);
-            fullResponse += chunk;
+    // Load models dynamically
+    async function loadModels() {
+        if (!modelSelect) return;
 
-            // Re-render markdown with accumulated text
-            // Optimization: For very long text, appending might be better than re-parsing everything,
-            // but marked is fast enough for typical chat usage.
-            assistantContentDiv.innerHTML = marked.parse(fullResponse);
+        // Show loading state
+        const originalText = modelSelect.options[modelSelect.selectedIndex]?.text || "Loading...";
+        const loadingOption = document.createElement('option');
+        loadingOption.text = "Fetching models...";
+        modelSelect.add(loadingOption);
+        modelSelect.disabled = true;
 
-            // Highlight code blocks
-            assistantContentDiv.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
+        try {
+            const response = await fetch('/api/models');
+            const data = await response.json();
+            const models = data.models || [];
+
+            modelSelect.innerHTML = ''; // Clear defaults/loading
+
+            if (models.length === 0) {
+                const option = document.createElement('option');
+                option.text = "No models found (Check Ollama)";
+                modelSelect.add(option);
+                return;
+            }
+
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.text = model;
+                // Auto-select preference order: exact match -> contains match -> first
+                if (model.includes("llama3.1:8b")) {
+                    option.selected = true;
+                } else if (model.includes("qwen") && !modelSelect.value) {
+                    // If no specific match yet, prefer qwen
+                    // logic can be complex, let's keep it simple: defaults to first if no match
+                }
+                modelSelect.add(option);
             });
 
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            // Restore selection if possible, or default to first
+            if (modelSelect.options.length > 0) {
+                modelSelect.disabled = false;
+            }
+
+        } catch (err) {
+            console.warn("Failed to load models.", err);
+            modelSelect.innerHTML = '<option>Connection Failed</option>';
+            showError("Could not fetch models. Is Ollama running?");
+        } finally {
+            modelSelect.disabled = false;
+        }
+    }
+
+    // Refresh Button Handler (Sync Models)
+    // We reuse the existing "New Chat" button icon for now, OR valid if I add a new button.
+    // Wait, the plan said "Add a Refresh Models button action to the existing refresh icon".
+    // The existing icon is title="New Chat" (onClick resetSession). 
+    // I should probably add a dedicated button in HTML next.
+    // For now, I'll add the function `window.refreshModels = loadModels;` so I can call it from HTML.
+    window.refreshModels = loadModels;
+
+    // Auto-load
+    loadModels();
+
+    function appendMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+
+        // Icon
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerHTML = role === 'user'
+            ? '<i class="ri-user-smile-line"></i>'
+            : '<i class="ri-shield-user-fill"></i>';
+
+        // Content
+        const content = document.createElement('div');
+        content.className = 'content';
+
+        if (role === 'assistant') {
+            content.innerHTML = text ? marked.parse(text) : '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+        } else {
+            content.innerText = text;
         }
 
-    } catch (err) {
-        console.error(err);
-        assistantContentDiv.innerHTML = `
-            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; color: #fca5a5;">
-                <strong>Error:</strong> ${err.message}<br>
-                <small>Check if Ollama is running and the model is installed.</small>
-            </div>`;
-    } finally {
-        sendBtn.disabled = false;
-        userInput.focus();
+        msgDiv.appendChild(avatar);
+        msgDiv.appendChild(content);
+        chatHistory.appendChild(msgDiv);
+
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        return content;
     }
-}
 
-async function resetSession() {
-    if (!confirm("Start a new chat? History will be cleared.")) return;
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
 
-    // Generate new ID
-    sessionId = crypto.randomUUID();
-    localStorage.setItem('sessionId', sessionId);
+        // UI Updates
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        sendBtn.disabled = true;
 
-    // visual cleanup
-    chatHistory.innerHTML = `
-        <div class="message assistant">
-            <div class="avatar"><i class="ri-shield-user-fill"></i></div>
-            <div class="content">
-                <p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p>
+        appendMessage('user', text);
+        const assistantContentDiv = appendMessage('assistant', '');
+
+        let fullResponse = "";
+
+        try {
+            const model = modelSelect.value;
+            const role = roleSelect ? roleSelect.value : "general";
+
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    model: model,
+                    role_mode: role,
+                    session_id: sessionId
+                })
+            });
+
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                fullResponse += chunk;
+
+                assistantContentDiv.innerHTML = marked.parse(fullResponse);
+
+                // Highlight code blocks
+                assistantContentDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+
+        } catch (err) {
+            console.error(err);
+            assistantContentDiv.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; color: #fca5a5;">
+                    <strong>Error:</strong> ${err.message}<br>
+                    <small>Check if Ollama is running and accessible.</small>
+                </div>`;
+        } finally {
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    // UUID Generator (Polyfill for non-secure contexts)
+    function generateUUID() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    async function resetSession() {
+        if (!confirm("Start a new chat? History will be cleared.")) return;
+
+        sessionId = generateUUID();
+        localStorage.setItem('sessionId', sessionId);
+
+        chatHistory.innerHTML = `
+            <div class="message assistant">
+                <div class="avatar"><i class="ri-shield-user-fill"></i></div>
+                <div class="content">
+                    <p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
 
-    // Optional: Tell backend to clear old session memory if needed, 
-    // but simply changing ID effectively resets it.
-}
+    // Initialize
+    console.log("App script loaded.");
+    const statusDiv = document.getElementById('connection-status');
+    const errorDiv = document.getElementById('error-display');
+
+    // Check session on load
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+        sessionId = generateUUID();
+        localStorage.setItem('sessionId', sessionId);
+    }
+
+    // Global Error Handler
+    window.onerror = function (message, source, lineno, colno, error) {
+        showError(`JS Error: ${message} (${source}:${lineno})`);
+        return false;
+    };
+
+    function showError(msg) {
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML += `<div>${msg}</div>`;
+        }
+        console.error(msg);
+    }
+
+    function updateStatus(msg, type = 'info') {
+        if (!statusDiv) return;
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = msg;
+        if (type === 'error') statusDiv.style.background = '#ef4444'; // Red
+        else if (type === 'success') statusDiv.style.background = '#22c55e'; // Green
+        else statusDiv.style.background = '#eab308'; // Yellow
+    }
+
+    // Health Check
+    async function checkHealth() {
+        updateStatus("Checking connection...", "info");
+        try {
+            const res = await fetch('/health');
+            const data = await res.json();
+            if (res.ok) {
+                const ollamaStatus = data.ollama_connected ? "Ollama Online" : "Ollama Offline";
+                updateStatus(`Server Online | ${ollamaStatus}`, data.ollama_connected ? 'success' : 'warn');
+            } else {
+                updateStatus(`Server Error: ${res.status}`, 'error');
+            }
+        } catch (err) {
+            updateStatus(`Connection Failed: ${err.message}`, 'error');
+            showError(`Health check failed: ${err.message}. Are you on the same network?`);
+        }
+    }
+
+    // Call health check on load
+    checkHealth();
+    loadModels();
+});

@@ -14,11 +14,10 @@
         rel="stylesheet">
 
     <!-- Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="/static/vendor/remixicon.css" rel="stylesheet">
 
     <!-- Highlight.js for code syntax -->
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
+    <link rel="stylesheet" href="/static/vendor/highlight-theme.css">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/style.css">
@@ -28,6 +27,15 @@
     <div class="app-container">
         <!-- Main Chat Area -->
         <main class="chat-interface">
+            <!-- DEBUG / STATUS BAR -->
+            <div id="connection-status"
+                style="background: #eab308; color: #000; padding: 5px; text-align: center; font-size: 12px; font-weight: bold; display: none;">
+                Connecting...
+            </div>
+            <div id="error-display"
+                style="background: #ef4444; color: white; padding: 10px; display: none; margin: 10px; border-radius: 5px; word-break: break-all;">
+            </div>
+
             <header class="chat-header">
                 <div class="header-content">
                     <div class="brand">
@@ -37,9 +45,9 @@
                     <div class="model-info">
                         <select id="model-select" class="premium-select">
                             <!-- Defaults (will be replaced if API connects) -->
+                            <option value="llama3.1:8b">Llama 3.1 (8B)</option>
                             <option value="llama3.1:70b">Llama 3.1 (70B)</option>
                             <option value="qwen2.5-coder:32b">Qwen 2.5 Coder (32B)</option>
-                            <option value="llama3.1:8b">Llama 3.1 (8B)</option>
                         </select>
 
                         <div class="divider"></div>
@@ -50,7 +58,11 @@
                         </select>
                     </div>
                     <div class="actions">
-                        <button class="icon-btn" onclick="resetSession()" title="New Chat">
+                        <button class="icon-btn" title="Sync Models" onclick="window.refreshModels()">
+                            <i class="ri-donuts-line"></i>
+                            <!-- Using 'donuts' as a metaphor for 'models' or just a distinct icon -->
+                        </button>
+                        <button class="icon-btn" title="New Chat">
                             <i class="ri-refresh-line"></i>
                         </button>
                     </div>
@@ -70,9 +82,8 @@
 
             <div class="chat-input-area">
                 <div class="input-wrapper">
-                    <textarea id="user-input" placeholder="Message AuditPartnership Bot..." rows="1"
-                        oninput="autoResize(this)"></textarea>
-                    <button id="send-btn" onclick="sendMessage()">
+                    <textarea id="user-input" placeholder="Message AuditPartnership Bot..." rows="1"></textarea>
+                    <button id="send-btn">
                         <i class="ri-send-plane-fill"></i>
                     </button>
                 </div>
@@ -84,8 +95,8 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="/static/vendor/marked.min.js"></script>
+    <script src="/static/vendor/highlight.min.js"></script>
     <script src="/static/app.js"></script>
 </body>
 

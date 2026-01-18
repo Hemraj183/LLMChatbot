@@ -11,6 +11,16 @@ from app.ollama_client import OllamaClient
 
 app = FastAPI()
 
+# Add CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -83,13 +93,17 @@ async def chat_endpoint(request: ChatRequest):
     
     messages = [{"role": "system", "content": system_content}] + raw_history
 
+    print(f"  [DEBUG] Starting stream response generator for session {session_id}")
     async def response_generator():
         full_response = ""
         # stream from ollama
+        print(f"  [DEBUG] Calling ollama_client.chat_stream...")
         async for chunk in ollama_client.chat_stream(request.model, messages):
+            # print(f"  [DEBUG] Received chunk: {chunk[:20]}...") # Optional: too noisy
             full_response += chunk
             yield chunk
         
+        print(f"  [DEBUG] Stream finished. Total length: {len(full_response)}")
         # Append assistant response to history after stream finishes
         sessions[session_id].append({"role": "assistant", "content": full_response})
 
