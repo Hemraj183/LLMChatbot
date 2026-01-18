@@ -1,4 +1,4 @@
-// --- Constants & Config ---
+// --- Configuration ---
 marked.setOptions({
     highlight: function (code, lang) {
         if (lang && hljs.getLanguage(lang)) {
@@ -9,15 +9,24 @@ marked.setOptions({
     breaks: true
 });
 
+// --- Constants & Global Scope ---
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
 let sessionId = localStorage.getItem('sessionId') || generateUUID();
 let turboModeEnabled = localStorage.getItem('turboModeEnabled') === 'true';
 let attachedImages = [];
 
-// --- Page Load ---
-document.addEventListener('DOMContentLoaded', () => {
+// --- Page Initialization ---
+function initApp() {
+    console.log("AuditPartnership Bot: Initializing...");
     localStorage.setItem('sessionId', sessionId);
 
-    // Elements
+    // DOM Elements
     const chatHistory = document.getElementById('chat-history');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -32,55 +41,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusTag = document.getElementById('connection-status');
     const errorDiv = document.getElementById('error-display');
 
-    // UI Updates
-    updateTurboUI();
-    updateSidebar();
+    // --- Core Functions (Defined before use) ---
 
-    // Event Listeners
-    if (turboToggle) {
-        turboToggle.addEventListener('click', () => {
-            turboModeEnabled = !turboModeEnabled;
-            localStorage.setItem('turboModeEnabled', turboModeEnabled);
-            updateTurboUI();
-        });
-    }
+    const updateStatus = (msg, type = 'info') => {
+        if (!statusTag) return;
+        statusTag.textContent = msg;
+        statusTag.style.background = (type === 'success') ? '#10b981' : (type === 'error' ? '#ef4444' : 'rgba(240, 223, 24, 0.2)');
+        statusTag.style.color = (type === 'info') ? '#facc15' : 'white';
+    };
 
-    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+    const updateTurboUI = () => {
+        if (!turboToggle) return;
+        turboToggle.classList.toggle('active', turboModeEnabled);
+        turboToggle.style.color = turboModeEnabled ? 'var(--primary-color)' : '';
+    };
 
-    if (userInput) {
-        userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+    const updateSidebar = () => {
+        try {
+            const raw = localStorage.getItem('chatHistory');
+            const history = (raw && raw !== "undefined") ? JSON.parse(raw) : [];
+            if (!Array.isArray(history) || history.length === 0) {
+                if (sidebarChats) sidebarChats.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
+                return;
             }
-        });
-        userInput.addEventListener('input', function () {
-            this.style.height = 'auto';
-            this.style.height = this.scrollHeight + 'px';
-        });
-    }
+            if (sidebarChats) {
+                sidebarChats.innerHTML = [...history].reverse().map(h => `<div class="sidebar-item" title="${h.title || ''}">${h.title || 'Untitled'}</div>`).join('');
+            }
+        } catch (e) {
+            console.error("Sidebar update failed", e);
+        }
+    };
 
-    if (uploadBtn) uploadBtn.addEventListener('click', () => fileInput.click());
-    if (fileInput) fileInput.addEventListener('change', handleFileSelect);
-    if (newChatBtn) newChatBtn.addEventListener('click', resetSession);
-
-    // --- Core Logic ---
-
-    async function loadModels() {
+    const loadModels = async () => {
+        console.log("AuditPartnership Bot: Fetching models...");
+        if (!modelSelect) return;
         try {
             const res = await fetch('/api/models');
             const data = await res.json();
-            if (data.models && data.models.length > 0) {
+            if (data.models && Array.isArray(data.models) && data.models.length > 0) {
                 const saved = localStorage.getItem('selectedModel');
                 modelSelect.innerHTML = data.models.map(m => {
                     const sel = (saved && m === saved) || (!saved && m.includes('llama3.1:8b'));
                     return `<option value="${m}" ${sel ? 'selected' : ''}>${m}</option>`;
                 }).join('');
+                if (sendBtn) sendBtn.disabled = false;
+                console.log("AuditPartnership Bot: Models loaded.");
+            } else {
+                modelSelect.innerHTML = '<option value="">No models available</option>';
             }
-        } catch (e) { console.error("Model fetch failed", e); }
-    }
+        } catch (e) {
+            console.error("Model fetch failed", e);
+            modelSelect.innerHTML = '<option value="">Fetch Failed</option>';
+        }
+    };
 
-    async function checkHealth() {
+    const checkHealth = async () => {
         try {
             const res = await fetch('/health');
             const data = await res.json();
@@ -89,10 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 updateStatus("Ollama Offline", "error");
             }
-        } catch (e) { updateStatus("Connection Lost", "error"); }
-    }
+        } catch (e) {
+            updateStatus("Connection Lost", "error");
+        }
+    };
 
-    async function sendMessage() {
+    const resetSession = () => {
+        if (!confirm("Start new conversation?")) return;
+        sessionId = generateUUID();
+        localStorage.setItem('sessionId', sessionId);
+        if (chatHistory) chatHistory.innerHTML = `<div class="message assistant"><div class="avatar"><i class="ri-shield-user-fill"></i></div><div class="content"><p>Hello! I am the AuditPartnership Bot. How can I assist you today?</p></div></div>`;
+        attachedImages = [];
+        if (filePreviews) filePreviews.innerHTML = '';
+        if (fileInput) fileInput.value = '';
+    };
+
+    const sendMessage = async () => {
         const text = userInput.value.trim();
         if (!text && attachedImages.length === 0) return;
 
@@ -101,11 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
         sendBtn.disabled = true;
 
         const currentImages = [...attachedImages];
-        clearPreviews();
+        attachedImages = [];
+        if (filePreviews) filePreviews.innerHTML = '';
+        if (fileInput) fileInput.value = '';
 
         appendMessage('user', text, currentImages);
         const assistantContentDiv = appendMessage('assistant', '');
-
         let fullResponse = "";
 
         try {
@@ -160,41 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             sendBtn.disabled = false;
             userInput.focus();
         }
-    }
+    };
 
-    // --- UI Helpers ---
-
-    function handleFileSelect(e) {
-        const files = Array.from(e.target.files);
-        files.forEach(file => {
-            if (!file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64 = e.target.result.split(',')[1];
-                attachedImages.push(base64);
-                renderPreview(e.target.result, attachedImages.length - 1);
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function renderPreview(src, index) {
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        div.innerHTML = `<img src="${src}"><button class="remove-preview" data-index="${index}"><i class="ri-close-line"></i></button>`;
-        div.querySelector('.remove-preview').onclick = function () {
-            const idx = parseInt(this.dataset.index);
-            attachedImages.splice(idx, 1);
-            this.parentElement.remove();
-        };
-        filePreviews.appendChild(div);
-    }
-
-    function clearPreviews() {
-        attachedImages = [];
-        filePreviews.innerHTML = '';
-        fileInput.value = '';
-    }
+    // --- Message Helpers ---
 
     function appendMessage(role, text, images = []) {
         const msgDiv = document.createElement('div');
@@ -270,21 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(div);
     }
 
-    function updateTurboUI() {
-        if (!turboToggle) return;
-        turboToggle.classList.toggle('active', turboModeEnabled);
-        turboToggle.style.color = turboModeEnabled ? 'var(--primary-color)' : '';
-    }
-
-    function updateSidebar() {
-        const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-        if (history.length === 0) {
-            sidebarChats.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
-            return;
-        }
-        sidebarChats.innerHTML = [...history].reverse().map(h => `<div class="sidebar-item" title="${h.title}">${h.title}</div>`).join('');
-    }
-
     function saveToSidebar() {
         const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
         const first = chatHistory.querySelector('.message.user .message-text')?.innerText || "New Conversation";
@@ -295,35 +276,54 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSidebar();
     }
 
-    function resetSession() {
-        if (!confirm("Start new conversation?")) return;
-        sessionId = generateUUID();
-        localStorage.setItem('sessionId', sessionId);
-        chatHistory.innerHTML = `<div class="message assistant"><div class="avatar"><i class="ri-shield-user-fill"></i></div><div class="content"><p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p></div></div>`;
-        clearPreviews();
+    function handleFileSelect(e) {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result.split(',')[1];
+                attachedImages.push(base64);
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `<img src="${e.target.result}"><button class="remove-preview"><i class="ri-close-line"></i></button>`;
+                div.querySelector('.remove-preview').onclick = function () {
+                    const idx = attachedImages.indexOf(base64);
+                    if (idx > -1) attachedImages.splice(idx, 1);
+                    this.parentElement.remove();
+                };
+                filePreviews.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
-    function updateStatus(msg, type = 'info') {
-        if (!statusTag) return;
-        statusTag.textContent = msg;
-        statusTag.style.background = (type === 'success') ? '#10b981' : (type === 'error' ? '#ef4444' : 'rgba(240, 223, 24, 0.1)');
-        statusTag.style.color = (type === 'info') ? 'var(--primary-color)' : 'white';
+    // --- Initialization Execution ---
+    updateTurboUI();
+    updateSidebar();
+
+    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+    if (turboToggle) turboToggle.addEventListener('click', () => { turboModeEnabled = !turboModeEnabled; localStorage.setItem('turboModeEnabled', turboModeEnabled); updateTurboUI(); });
+    if (uploadBtn) uploadBtn.addEventListener('click', () => fileInput.click());
+    if (fileInput) fileInput.addEventListener('change', handleFileSelect);
+    if (newChatBtn) newChatBtn.addEventListener('click', resetSession);
+    if (userInput) {
+        userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        userInput.addEventListener('input', function () { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
     }
 
-    // Startup
+    // Export globals
+    window.refreshModels = loadModels;
+    window.resetSession = resetSession;
+
+    // Async startup
     checkHealth();
     loadModels();
     setInterval(checkHealth, 30000);
     checkAndShowPrivacyModal();
-});
-
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        const r = Math.random() * 16 | 0;
-        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
 }
 
+// --- Privacy Modal (Global Scope) ---
 async function checkAndShowPrivacyModal() {
     const modal = document.getElementById('privacy-modal');
     if (!modal || localStorage.getItem('privacyAccepted')) return;
@@ -332,8 +332,15 @@ async function checkAndShowPrivacyModal() {
         const config = await res.json();
         if (config.is_cloud) modal.style.display = 'flex';
     } catch (e) { }
-    document.getElementById('privacy-accept')?.onclick = () => {
-        localStorage.setItem('privacyAccepted', 'true');
-        modal.style.display = 'none';
-    };
+    const accept = document.getElementById('privacy-accept');
+    if (accept) {
+        accept.onclick = () => { localStorage.setItem('privacyAccepted', 'true'); modal.style.display = 'none'; };
+    }
+}
+
+// --- Entry Point ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
 }
