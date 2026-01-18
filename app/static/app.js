@@ -1,4 +1,4 @@
-// Markdown configuration
+// --- Configuration ---
 marked.setOptions({
     highlight: function (code, lang) {
         if (lang && hljs.getLanguage(lang)) {
@@ -9,18 +9,12 @@ marked.setOptions({
     breaks: true
 });
 
-// Markdown configuration
-marked.setOptions({
-    highlight: function (code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-        }
-        return hljs.highlightAuto(code).value;
-    },
-    breaks: true
-});
+// --- Constants & State ---
+let sessionId = localStorage.getItem('sessionId') || generateUUID();
+let turboModeEnabled = localStorage.getItem('turboModeEnabled') === 'true';
+let attachedImages = []; // Stores base64 strings
 
-// Main Initialization
+// --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const chatHistory = document.getElementById('chat-history');
@@ -28,15 +22,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const modelSelect = document.getElementById('model-select');
     const roleSelect = document.getElementById('role-select');
-    const resetBtn = document.querySelector('button[title="New Chat"]'); // Access by attribute
     const turboToggle = document.getElementById('turbo-toggle');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const filePreviews = document.getElementById('file-previews');
+    const sidebarChats = document.getElementById('sidebar-chats');
+    const newChatBtn = document.getElementById('new-chat-sidebar-btn');
 
-    let turboModeEnabled = localStorage.getItem('turboModeEnabled') === 'true';
+    // Persistence
+    localStorage.setItem('sessionId', sessionId);
     updateTurboUI();
+    updateSidebar();
 
     // --- Event Listeners ---
 
-    // Turbo Mode Toggle
     if (turboToggle) {
         turboToggle.addEventListener('click', () => {
             turboModeEnabled = !turboModeEnabled;
@@ -45,27 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateTurboUI() {
-        if (!turboToggle) return;
-        if (turboModeEnabled) {
-            turboToggle.classList.add('active');
-            turboToggle.style.color = 'var(--primary-color)';
-            turboToggle.style.textShadow = '0 0 10px var(--primary-glow)';
-        } else {
-            turboToggle.classList.remove('active');
-            turboToggle.style.color = '';
-            turboToggle.style.textShadow = '';
-        }
-    }
+    if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
-    // Send Button
-
-    // Send Button
-    if (sendBtn) {
-        sendBtn.addEventListener('click', sendMessage);
-    }
-
-    // Input Keydown (Enter to send)
     if (userInput) {
         userInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -73,234 +53,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendMessage();
             }
         });
-
-        // Auto-resize
         userInput.addEventListener('input', function () {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
         });
     }
 
-    // Reset Button
-    if (resetBtn) {
-        resetBtn.addEventListener('click', resetSession);
+    if (uploadBtn) uploadBtn.addEventListener('click', () => fileInput.click());
+
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
     }
 
-    // --- Functions ---
+    if (newChatBtn) newChatBtn.addEventListener('click', resetSession);
 
-    // Add copy buttons and headers to code blocks
-    function addCopyButtonsToCodeBlocks(container) {
-        container.querySelectorAll('pre').forEach((pre) => {
-            // Avoid processing multiple times
-            if (pre.dataset.processed) return;
-            pre.dataset.processed = 'true';
-
-            const codeBlock = pre.querySelector('code');
-            if (!codeBlock) return;
-
-            // Detect language
-            let lang = 'code';
-            const classes = codeBlock.className.split(' ');
-            const langClass = classes.find(c => c.startsWith('language-'));
-            if (langClass) {
-                lang = langClass.replace('language-', '');
-            }
-
-            // Create Header
-            const header = document.createElement('div');
-            header.className = 'code-header';
-
-            const langLabel = document.createElement('span');
-            langLabel.className = 'lang-label';
-            langLabel.textContent = lang.toUpperCase();
-
-            const button = document.createElement('button');
-            button.className = 'copy-btn-new';
-            button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
-            button.title = 'Copy code';
-
-            button.addEventListener('click', async () => {
-                const code = codeBlock.textContent;
-                let success = false;
-
-                // Primary Method: Navigator Clipboard
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    try {
-                        await navigator.clipboard.writeText(code);
-                        success = true;
-                    } catch (err) {
-                        console.warn('Navigator clipboard failed, trying fallback.', err);
-                    }
-                }
-
-                // Fallback Method: Textarea Hack (Works in insecure contexts/HTTP)
-                if (!success) {
-                    try {
-                        const textArea = document.createElement("textarea");
-                        textArea.value = code;
-                        // Avoid scrolling to bottom
-                        textArea.style.top = "0";
-                        textArea.style.left = "0";
-                        textArea.style.position = "fixed";
-                        document.body.appendChild(textArea);
-                        textArea.focus();
-                        textArea.select();
-                        success = document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                    } catch (err) {
-                        console.error('Fallback copy failed:', err);
-                    }
-                }
-
-                if (success) {
-                    button.innerHTML = '<i class="ri-check-line"></i> Copied!';
-                    button.classList.add('success');
-                    setTimeout(() => {
-                        button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
-                        button.classList.remove('success');
-                    }, 2000);
-                } else {
-                    button.innerHTML = '<i class="ri-error-warning-line"></i> Error';
-                    setTimeout(() => {
-                        button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
-                    }, 2000);
-                }
-            });
-
-            header.appendChild(langLabel);
-            header.appendChild(button);
-
-            pre.parentNode.insertBefore(header, pre);
-        });
-    }
-
-    // --- Functions ---
-
-    // Load models dynamically
-    async function loadModels() {
-        if (!modelSelect) return;
-
-        // Show loading state
-        const originalText = modelSelect.options[modelSelect.selectedIndex]?.text || "Loading...";
-        const loadingOption = document.createElement('option');
-        loadingOption.text = "Fetching models...";
-        modelSelect.add(loadingOption);
-        modelSelect.disabled = true;
-
-        try {
-            const response = await fetch('/api/models');
-            const data = await response.json();
-            const models = data.models || [];
-
-            modelSelect.innerHTML = ''; // Clear defaults/loading
-
-            if (models.length === 0) {
-                const option = document.createElement('option');
-                option.text = "No models found (Check Ollama)";
-                modelSelect.add(option);
-                return;
-            }
-
-            models.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model;
-                option.text = model;
-                // Auto-select preference order: exact match -> contains match -> first
-                if (model.includes("llama3.1:8b")) {
-                    option.selected = true;
-                } else if (model.includes("qwen") && !modelSelect.value) {
-                    // If no specific match yet, prefer qwen
-                    // logic can be complex, let's keep it simple: defaults to first if no match
-                }
-                modelSelect.add(option);
-            });
-
-            // Restore selection if possible, or default to first
-            if (modelSelect.options.length > 0) {
-                modelSelect.disabled = false;
-            }
-
-        } catch (err) {
-            console.warn("Failed to load models.", err);
-            modelSelect.innerHTML = '<option>Connection Failed</option>';
-            showError("Could not fetch models. Is Ollama running?");
-        } finally {
-            modelSelect.disabled = false;
-        }
-    }
-
-    // Refresh Button Handler (Sync Models)
-    // We reuse the existing "New Chat" button icon for now, OR valid if I add a new button.
-    // Wait, the plan said "Add a Refresh Models button action to the existing refresh icon".
-    // The existing icon is title="New Chat" (onClick resetSession). 
-    // I should probably add a dedicated button in HTML next.
-    // For now, I'll add the function `window.refreshModels = loadModels;` so I can call it from HTML.
-    window.refreshModels = loadModels;
-
-    // Auto-load
-    loadModels();
-
-    function appendMessage(role, text) {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${role}`;
-
-        // Icon
-        const avatar = document.createElement('div');
-        avatar.className = 'avatar';
-        avatar.innerHTML = role === 'user'
-            ? '<i class="ri-user-smile-line"></i>'
-            : '<i class="ri-shield-user-fill"></i>';
-
-        // Content
-        const content = document.createElement('div');
-        content.className = 'content';
-
-        if (role === 'assistant') {
-            content.innerHTML = text ? marked.parse(text) : '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-        } else {
-            content.innerText = text;
-        }
-
-        msgDiv.appendChild(avatar);
-        msgDiv.appendChild(content);
-        chatHistory.appendChild(msgDiv);
-
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-
-        return content;
-    }
+    // --- Core Functions ---
 
     async function sendMessage() {
         const text = userInput.value.trim();
-        if (!text) return;
+        if (!text && attachedImages.length === 0) return;
 
-        // UI Updates
+        // UI Prep
         userInput.value = '';
         userInput.style.height = 'auto';
         sendBtn.disabled = true;
 
-        appendMessage('user', text);
+        const currentImages = [...attachedImages]; // Copy current images
+        clearPreviews(); // Clear attached images state and UI
+
+        appendMessage('user', text, currentImages);
         const assistantContentDiv = appendMessage('assistant', '');
 
         let fullResponse = "";
 
         try {
-            const model = modelSelect.value;
-            const role = roleSelect ? roleSelect.value : "general";
-
             const payload = {
                 message: text,
-                model: model,
-                role_mode: role,
-                session_id: sessionId
+                model: modelSelect.value,
+                role_mode: roleSelect ? roleSelect.value : "general",
+                session_id: sessionId,
+                images: currentImages.length > 0 ? currentImages : null
             };
 
             if (turboModeEnabled) {
-                payload.options = {
-                    num_gpu: -1,      // Force all layers to GPU
-                    num_thread: 16,   // Optimize for multi-core DGX
-                    num_ctx: 4096     // Ensure consistent context
-                };
+                payload.options = { num_gpu: -1, num_thread: 16, num_ctx: 4096 };
             }
 
             const response = await fetch('/api/chat', {
@@ -313,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-
             let metrics = null;
 
             while (true) {
@@ -321,179 +116,235 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (done) break;
 
                 const chunk = decoder.decode(value);
-
-                // Check for metadata
                 if (chunk.includes("__METADATA__")) {
                     const parts = chunk.split("__METADATA__");
-                    fullResponse += parts[0]; // Content before metadata if any
-
-                    try {
-                        metrics = JSON.parse(parts[1]);
-                    } catch (e) {
-                        console.error("Failed to parse metadata", e);
-                    }
+                    fullResponse += parts[0];
+                    try { metrics = JSON.parse(parts[1]); } catch (e) { }
                 } else {
                     fullResponse += chunk;
                 }
 
                 assistantContentDiv.innerHTML = marked.parse(fullResponse);
-
-                // Highlight code blocks and add copy buttons
-                assistantContentDiv.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-                addCopyButtonsToCodeBlocks(assistantContentDiv);
-
+                renderCodeBlocks(assistantContentDiv);
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
 
-            // Append metrics if available
-            if (metrics) {
-                const metricsDiv = document.createElement('div');
-                metricsDiv.className = 'metrics';
-                metricsDiv.innerHTML = `${metrics.tps} tps | ${metrics.tokens} tokens | ${metrics.duration_s}s`;
-                assistantContentDiv.appendChild(metricsDiv);
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-            }
+            if (metrics) renderMetrics(assistantContentDiv, metrics);
+            saveToSidebar(); // Update sidebar with new conversation context
 
         } catch (err) {
-            console.error(err);
-            assistantContentDiv.innerHTML = `
-                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; color: #fca5a5;">
-                    <strong>Error:</strong> ${err.message}<br>
-                    <small>Check if Ollama is running and accessible.</small>
-                </div>`;
+            assistantContentDiv.innerHTML = `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
         } finally {
             sendBtn.disabled = false;
             userInput.focus();
         }
     }
 
-    // UUID Generator (Polyfill for non-secure contexts)
-    function generateUUID() {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            return crypto.randomUUID();
-        }
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
+    function handleFileSelect(e) {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result.split(',')[1];
+                attachedImages.push(base64);
+                renderPreview(e.target.result, attachedImages.length - 1);
+            };
+            reader.readAsDataURL(file);
         });
     }
 
-    async function resetSession() {
-        if (!confirm("Start a new chat? History will be cleared.")) return;
+    function renderPreview(src, index) {
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        div.innerHTML = `
+            <img src="${src}">
+            <button class="remove-preview" data-index="${index}"><i class="ri-close-line"></i></button>
+        `;
+        div.querySelector('.remove-preview').onclick = function () {
+            const idx = parseInt(this.dataset.index);
+            attachedImages.splice(idx, 1);
+            this.parentElement.remove();
+        };
+        filePreviews.appendChild(div);
+    }
 
+    function clearPreviews() {
+        attachedImages = [];
+        filePreviews.innerHTML = '';
+        fileInput.value = '';
+    }
+
+    function appendMessage(role, text, images = []) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerHTML = role === 'user' ? '<i class="ri-user-smile-line"></i>' : '<i class="ri-shield-user-fill"></i>';
+
+        const content = document.createElement('div');
+        content.className = 'content';
+
+        if (images.length > 0) {
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'message-images';
+            images.forEach(img => {
+                const imgEl = document.createElement('img');
+                imgEl.src = `data:image/jpeg;base64,${img}`;
+                imgEl.className = 'msg-image';
+                imgContainer.appendChild(imgEl);
+            });
+            content.appendChild(imgContainer);
+        }
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'message-text';
+        if (role === 'assistant') {
+            textDiv.innerHTML = text ? marked.parse(text) : '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+        } else {
+            textDiv.innerText = text;
+        }
+        content.appendChild(textDiv);
+
+        msgDiv.appendChild(avatar);
+        msgDiv.appendChild(content);
+        chatHistory.appendChild(msgDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+        return textDiv;
+    }
+
+    // --- Helpers ---
+
+    function renderCodeBlocks(container) {
+        container.querySelectorAll('pre').forEach((pre) => {
+            if (pre.dataset.processed) return;
+            pre.dataset.processed = 'true';
+            const codeBlock = pre.querySelector('code');
+            if (!codeBlock) return;
+
+            let lang = 'code';
+            const langClass = Array.from(codeBlock.classList).find(c => c.startsWith('language-'));
+            if (langClass) lang = langClass.replace('language-', '');
+
+            const header = document.createElement('div');
+            header.className = 'code-header';
+            header.innerHTML = `<span class="lang-label">${lang.toUpperCase()}</span>`;
+
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn-new';
+            btn.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
+            btn.onclick = () => copyCode(codeBlock.textContent, btn);
+
+            header.appendChild(btn);
+            pre.parentNode.insertBefore(header, pre);
+            hljs.highlightElement(codeBlock);
+        });
+    }
+
+    async function copyCode(code, btn) {
+        let success = false;
+        if (navigator.clipboard) {
+            try { await navigator.clipboard.writeText(code); success = true; } catch (e) { }
+        }
+        if (!success) {
+            const ta = document.createElement('textarea');
+            ta.value = code; document.body.appendChild(ta);
+            ta.select(); success = document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        if (success) {
+            btn.innerHTML = '<i class="ri-check-line"></i> Copied!';
+            setTimeout(() => btn.innerHTML = '<i class="ri-clipboard-line"></i> Copy', 2000);
+        }
+    }
+
+    function renderMetrics(container, m) {
+        const div = document.createElement('div');
+        div.className = 'metrics';
+        div.innerHTML = `${m.tps} tps | ${m.tokens} tokens | ${m.duration_s}s`;
+        container.appendChild(div);
+    }
+
+    function updateTurboUI() {
+        if (!turboToggle) return;
+        turboToggle.classList.toggle('active', turboModeEnabled);
+        turboToggle.style.color = turboModeEnabled ? 'var(--primary-color)' : '';
+    }
+
+    async function loadModels() {
+        try {
+            const res = await fetch('/api/models');
+            const data = await res.json();
+            modelSelect.innerHTML = (data.models || []).map(m => `<option value="${m}" ${m.includes('llama3.1:8b') ? 'selected' : ''}>${m}</option>`).join('');
+        } catch (e) { showError("Failed to reach models."); }
+    }
+    window.refreshModels = loadModels;
+    loadModels();
+
+    function updateSidebar() {
+        const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        if (history.length === 0) {
+            sidebarChats.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
+            return;
+        }
+        sidebarChats.innerHTML = history.reverse().map(h => `
+            <div class="sidebar-item" title="${h.title}">${h.title}</div>
+        `).join('');
+    }
+
+    function saveToSidebar() {
+        // Simple logic for sidebar items
+        const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+        const firstUserMsg = chatHistory.querySelector('.message.user .message-text')?.innerText || "New Conversation";
+        if (!history.find(h => h.id === sessionId)) {
+            history.push({ id: sessionId, title: firstUserMsg.substring(0, 30) + "..." });
+            localStorage.setItem('chatHistory', JSON.stringify(history));
+        }
+        updateSidebar();
+    }
+
+    function resetSession() {
+        if (!confirm("Start new conversation?")) return;
         sessionId = generateUUID();
         localStorage.setItem('sessionId', sessionId);
-
         chatHistory.innerHTML = `
             <div class="message assistant">
                 <div class="avatar"><i class="ri-shield-user-fill"></i></div>
-                <div class="content">
-                    <p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p>
-                </div>
+                <div class="content"><p>Hello! How can I assist you today?</p></div>
             </div>
         `;
+        clearPreviews();
+    }
+    window.resetSession = resetSession;
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
     }
 
-    // Initialize
-    console.log("App script loaded.");
-    const statusDiv = document.getElementById('connection-status');
-    const errorDiv = document.getElementById('error-display');
-
-    // Check session on load
-    let sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) {
-        sessionId = generateUUID();
-        localStorage.setItem('sessionId', sessionId);
+    function showError(m) {
+        const err = document.getElementById('error-display');
+        if (err) { err.style.display = 'block'; err.textContent = m; }
     }
 
-    // Global Error Handler
-    window.onerror = function (message, source, lineno, colno, error) {
-        showError(`JS Error: ${message} (${source}:${lineno})`);
-        return false;
-    };
-
-    function showError(msg) {
-        if (errorDiv) {
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML += `<div>${msg}</div>`;
-        }
-        console.error(msg);
-    }
-
-    function updateStatus(msg, type = 'info') {
-        if (!statusDiv) return;
-        statusDiv.style.display = 'block';
-        statusDiv.textContent = msg;
-        if (type === 'error') statusDiv.style.background = '#ef4444'; // Red
-        else if (type === 'success') statusDiv.style.background = '#22c55e'; // Green
-        else statusDiv.style.background = '#eab308'; // Yellow
-    }
-
-    // Health Check
-    async function checkHealth() {
-        updateStatus("Checking connection...", "info");
-        try {
-            const res = await fetch('/health');
-            const data = await res.json();
-            if (res.ok) {
-                const ollamaStatus = data.ollama_connected ? "Ollama Online" : "Ollama Offline";
-                updateStatus(`Server Online | ${ollamaStatus}`, data.ollama_connected ? 'success' : 'warn');
-            } else {
-                updateStatus(`Server Error: ${res.status}`, 'error');
-            }
-        } catch (err) {
-            updateStatus(`Connection Failed: ${err.message}`, 'error');
-            showError(`Health check failed: ${err.message}. Are you on the same network?`);
-        }
-    }
-
-    // Call health check on load
-    checkHealth();
-    loadModels();
-
-    // Privacy Warning Modal - Only for Cloud Deployments
-    const privacyModal = document.getElementById('privacy-modal');
-    const privacyAccept = document.getElementById('privacy-accept');
-    const hasAcceptedPrivacy = localStorage.getItem('privacyAccepted');
-
-    // Check if this is a cloud deployment and show modal accordingly
-    async function checkAndShowPrivacyModal() {
-        try {
-            const response = await fetch('/api/config');
-            const config = await response.json();
-
-            // Only show privacy modal for cloud deployments
-            if (config.is_cloud && !hasAcceptedPrivacy) {
-                if (privacyModal) {
-                    privacyModal.style.display = 'flex';
-                }
-            }
-        } catch (err) {
-            console.warn('Failed to check cloud status:', err);
-            // Default to not showing modal if we can't determine cloud status
-        }
-    }
-
-    // Call the function on load
     checkAndShowPrivacyModal();
-
-    // Handle privacy acceptance
-    if (privacyAccept) {
-        privacyAccept.addEventListener('click', () => {
-            localStorage.setItem('privacyAccepted', 'true');
-            if (privacyModal) {
-                privacyModal.style.display = 'none';
-            }
-        });
-
-        // Add hover effect
-        privacyAccept.addEventListener('mouseenter', () => {
-            privacyAccept.style.transform = 'scale(1.02)';
-        });
-        privacyAccept.addEventListener('mouseleave', () => {
-            privacyAccept.style.transform = 'scale(1)';
-        });
-    }
 });
+
+// Privacy Modal Logic
+async function checkAndShowPrivacyModal() {
+    const privacyModal = document.getElementById('privacy-modal');
+    const hasAccepted = localStorage.getItem('privacyAccepted');
+    if (hasAccepted) return;
+    try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        if (config.is_cloud && privacyModal) privacyModal.style.display = 'flex';
+    } catch (e) { }
+    document.getElementById('privacy-accept')?.addEventListener('click', () => {
+        localStorage.setItem('privacyAccepted', 'true');
+        privacyModal.style.display = 'none';
+    });
+}

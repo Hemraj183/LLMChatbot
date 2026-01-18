@@ -4,83 +4,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audit Partnership AI Assistant</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-
-    <!-- Icons -->
-    <link href="/static/vendor/remixicon.css" rel="stylesheet">
-
-    <!-- Highlight.js for code syntax -->
-    <link rel="stylesheet" href="/static/vendor/highlight-theme.css">
-
-    <!-- Custom CSS -->
+    <title>AuditPartnership Bot | DGX AI</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- Remix Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for Code -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 </head>
 
 <body>
-    <!-- Privacy Warning Modal -->
-    <div id="privacy-modal"
-        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
-        <div
-            style="background: #1a1a1a; border: 2px solid #F0DF18; border-radius: 12px; padding: 2rem; max-width: 500px; margin: 1rem; box-shadow: 0 0 30px rgba(240, 223, 24, 0.3);">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                <i class="ri-alert-line" style="font-size: 2.5rem; color: #F0DF18;"></i>
-                <h2 style="margin: 0; color: #F0DF18; font-family: 'DM Sans', sans-serif;">Privacy Notice</h2>
-            </div>
-            <p style="color: #f3f4f6; line-height: 1.6; margin-bottom: 1.5rem; font-family: 'DM Sans', sans-serif;">
-                <strong>Warning:</strong> Do not send any company confidential data through this chatbot.
-                This tool is intended for <strong>research and testing purposes only</strong>.
-            </p>
-            <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1.5rem; font-family: 'DM Sans', sans-serif;">
-                By clicking "I Understand", you acknowledge that you will not share sensitive or proprietary
-                information.
-            </p>
-            <button id="privacy-accept"
-                style="width: 100%; background: linear-gradient(135deg, #00786E, #073C41); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: transform 0.2s;">
-                I Understand
-            </button>
-        </div>
-    </div>
-
     <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="ri-history-line"></i>
+                <span>Recent Chats</span>
+            </div>
+            <div class="sidebar-content" id="sidebar-chats">
+                <!-- Chat list will be populated here -->
+                <div class="sidebar-empty">No conversations yet</div>
+            </div>
+            <div class="sidebar-footer">
+                <button class="ghost-btn" id="new-chat-sidebar-btn">
+                    <i class="ri-add-line"></i> New Conversation
+                </button>
+            </div>
+        </aside>
+
         <!-- Main Chat Area -->
         <main class="chat-interface">
-            <!-- DEBUG / STATUS BAR -->
-            <div id="connection-status"
-                style="background: #eab308; color: #000; padding: 5px; text-align: center; font-size: 12px; font-weight: bold; display: none;">
-                Connecting...
-            </div>
-            <div id="error-display"
-                style="background: #ef4444; color: white; padding: 10px; display: none; margin: 10px; border-radius: 5px; word-break: break-all;">
-            </div>
-
             <header class="chat-header">
                 <div class="header-content">
                     <div class="brand">
-                        <img src="/static/logo-ap.png" alt="Audit Partnership"
-                            style="height: 32px; margin-right: 8px; filter: brightness(1.1);">
-                        <span class="brand-text">AI Assistant</span>
+                        <i class="ri-pulse-line on-brand"></i>
+                        <span>AuditPartnership <span class="dim">Bot</span></span>
                     </div>
-
                     <div class="model-info">
+                        <div class="status-dot"></div>
                         <select id="model-select" class="premium-select">
-                            <!-- Defaults (will be replaced if API connects) -->
-                            <option value="llama3.1:8b">Llama 3.1 (8B)</option>
-                            <option value="llama3.1:70b">Llama 3.1 (70B)</option>
-                            <option value="qwen2.5-coder:32b">Qwen 2.5 Coder (32B)</option>
+                            <option value="llama3.1:8b">llama3.1:8b</option>
                         </select>
-
                         <div class="divider"></div>
-
                         <select id="role-select" class="premium-select">
-                            <option value="general">General Assistant</option>
-                            <option value="data_engineer">Data & AI Engineer</option>
+                            <option value="general">🤖 General</option>
+                            <option value="data_engineer">⚙️ Data Engineer</option>
                         </select>
                     </div>
                     <div class="actions">
@@ -89,17 +59,14 @@
                         </button>
                         <button class="icon-btn" title="Sync Models" onclick="window.refreshModels()">
                             <i class="ri-donuts-line"></i>
-                            <!-- Using 'donuts' as a metaphor for 'models' or just a distinct icon -->
                         </button>
-                        <button class="icon-btn" title="New Chat">
-                            <i class="ri-refresh-line"></i>
-                        </button>
+                        <div id="connection-status" class="status-tag">Checking...</div>
                     </div>
                 </div>
             </header>
 
             <div id="chat-history" class="chat-history">
-                <!-- Welcome Message -->
+                <!-- Initial Welcome Message -->
                 <div class="message assistant">
                     <div class="avatar"><i class="ri-shield-user-fill"></i></div>
                     <div class="content">
@@ -110,25 +77,41 @@
             </div>
 
             <div class="chat-input-area">
+                <div id="file-previews" class="file-previews"></div>
+
                 <div class="input-wrapper">
-                    <textarea id="user-input" placeholder="Message AuditPartnership Bot..." rows="1"></textarea>
-                    <button id="send-btn">
-                        <i class="ri-send-plane-fill"></i>
+                    <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                    <button id="upload-btn" class="icon-btn" title="Upload Images">
+                        <i class="ri-attachment-2"></i>
+                    </button>
+
+                    <textarea id="user-input" placeholder="Ask me anything... (Shift + Enter for new line)"
+                        rows="1"></textarea>
+
+                    <button id="send-btn" title="Send Message">
+                        <i class="ri-send-plane-2-fill"></i>
                     </button>
                 </div>
                 <div class="disclaimer">
-                    AI can make mistakes. Please verify important information.
-                </div>
-                <div class="footer">
-                    Created by Hemaraj Dhakal | Audit Partnership © 2026
+                    <div id="error-display" style="display:none; color:#ef4444; margin-bottom:5px;"></div>
+                    <i class="ri-information-line"></i> AI may produce inaccurate results. Verify important info.
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Scripts -->
-    <script src="/static/vendor/marked.min.js"></script>
-    <script src="/static/vendor/highlight.min.js"></script>
+    <!-- Privacy Warning Modal (Only for Cloud) -->
+    <div id="privacy-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3><i class="ri-shield-keyhole-line"></i> Privacy & Data Usage</h3>
+            <p>This deployment is running in a cloud environment. Please avoid sharing sensitive or confidential company
+                data.</p>
+            <div class="modal-actions">
+                <button id="privacy-accept" class="primary-btn">I Understand</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
 </body>
 

@@ -10,7 +10,7 @@ class OllamaClient:
     def __init__(self, base_url="http://localhost:11434"):
         self.base_url = base_url
 
-    async def chat_stream(self, model: str, messages: list, options: dict = None):
+    async def chat_stream(self, model: str, messages: list, options: dict = None, images: list = None):
         """
         Streams chat responses from Ollama.
         """
@@ -23,6 +23,10 @@ class OllamaClient:
         
         if options:
             payload["options"] = options
+        if images:
+            # Add images to the LAST message in the conversation for vision models
+            if messages:
+                messages[-1]["images"] = images
 
         print(f"  [OllamaClient] Connecting to {url} with model {model}...")
         try:
