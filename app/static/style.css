@@ -1,18 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
 :root {
-    --bg-color: #0f1117;
-    /* Deep dark blue-black */
-    --surface-color: #1e212b;
-    --surface-hover: #2d323f;
-    --primary-color: #6366f1;
-    /* Indigo */
-    --primary-glow: rgba(99, 102, 241, 0.4);
+    --bg-color: #0a0a0a;
+    /* Deep dark background */
+    --surface-color: #1a1a1a;
+    --surface-hover: #2a2a2a;
+    --primary-color: #F0DF18;
+    /* AuditPartnership Yellow */
+    --primary-glow: rgba(240, 223, 24, 0.3);
+    --brand-teal: #00786E;
+    /* AuditPartnership Teal */
+    --brand-dark-teal: #073C41;
+    /* AuditPartnership Dark Teal */
     --text-primary: #f3f4f6;
     --text-secondary: #9ca3af;
     --border-color: #374151;
     --message-user-bg: #2b2f3a;
     --message-assistant-bg: transparent;
 
-    --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-dm-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
 
@@ -25,7 +31,7 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-primary);
-    font-family: var(--font-inter);
+    font-family: var(--font-dm-sans);
     height: 100vh;
     overflow: hidden;
     line-height: 1.6;
@@ -83,7 +89,7 @@ body {
     color: var(--text-primary);
     padding: 0.4rem 0.8rem;
     border-radius: 6px;
-    font-family: var(--font-inter);
+    font-family: var(--font-dm-sans);
     font-size: 0.9rem;
     cursor: pointer;
     outline: none;
@@ -305,7 +311,7 @@ textarea {
     border: none;
     resize: none;
     color: var(--text-primary);
-    font-family: var(--font-inter);
+    font-family: var(--font-dm-sans);
     font-size: 1rem;
     max-height: 200px;
     outline: none;

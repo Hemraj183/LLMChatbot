@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuditPartnership Bot</title>
+    <title>Audit Partnership AI Assistant</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,6 +24,30 @@
 </head>
 
 <body>
+    <!-- Privacy Warning Modal -->
+    <div id="privacy-modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+        <div
+            style="background: #1a1a1a; border: 2px solid #F0DF18; border-radius: 12px; padding: 2rem; max-width: 500px; margin: 1rem; box-shadow: 0 0 30px rgba(240, 223, 24, 0.3);">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <i class="ri-alert-line" style="font-size: 2.5rem; color: #F0DF18;"></i>
+                <h2 style="margin: 0; color: #F0DF18; font-family: 'DM Sans', sans-serif;">Privacy Notice</h2>
+            </div>
+            <p style="color: #f3f4f6; line-height: 1.6; margin-bottom: 1.5rem; font-family: 'DM Sans', sans-serif;">
+                <strong>Warning:</strong> Do not send any company confidential data through this chatbot.
+                This tool is intended for <strong>research and testing purposes only</strong>.
+            </p>
+            <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 1.5rem; font-family: 'DM Sans', sans-serif;">
+                By clicking "I Understand", you acknowledge that you will not share sensitive or proprietary
+                information.
+            </p>
+            <button id="privacy-accept"
+                style="width: 100%; background: linear-gradient(135deg, #00786E, #073C41); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: transform 0.2s;">
+                I Understand
+            </button>
+        </div>
+    </div>
+
     <div class="app-container">
         <!-- Main Chat Area -->
         <main class="chat-interface">
@@ -39,7 +63,9 @@
             <header class="chat-header">
                 <div class="header-content">
                     <div class="brand">
-                        <i class="ri-shield-check-fill on-brand"></i> <span class="brand-text">AuditPartnership</span>
+                        <img src="/static/logo-ap.png" alt="Audit Partnership"
+                            style="height: 32px; margin-right: 8px; filter: brightness(1.1);">
+                        <span class="brand-text">AI Assistant</span>
                     </div>
 
                     <div class="model-info">
@@ -89,6 +115,9 @@
                 </div>
                 <div class="disclaimer">
                     AI can make mistakes. Please verify important information.
+                </div>
+                <div class="footer">
+                    Created by Hemaraj Dhakal | Audit Partnership © 2026
                 </div>
             </div>
         </main>

@@ -301,4 +301,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Call health check on load
     checkHealth();
     loadModels();
+
+    // Privacy Warning Modal
+    const privacyModal = document.getElementById('privacy-modal');
+    const privacyAccept = document.getElementById('privacy-accept');
+    const hasAcceptedPrivacy = localStorage.getItem('privacyAccepted');
+
+    // Show modal on first visit or if not previously accepted
+    if (!hasAcceptedPrivacy) {
+        if (privacyModal) {
+            privacyModal.style.display = 'flex';
+        }
+    }
+
+    // Handle privacy acceptance
+    if (privacyAccept) {
+        privacyAccept.addEventListener('click', () => {
+            localStorage.setItem('privacyAccepted', 'true');
+            if (privacyModal) {
+                privacyModal.style.display = 'none';
+            }
+        });
+
+        // Add hover effect
+        privacyAccept.addEventListener('mouseenter', () => {
+            privacyAccept.style.transform = 'scale(1.02)';
+        });
+        privacyAccept.addEventListener('mouseleave', () => {
+            privacyAccept.style.transform = 'scale(1)';
+        });
+    }
 });
