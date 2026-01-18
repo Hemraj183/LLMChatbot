@@ -1,4 +1,4 @@
-// --- Configuration ---
+// --- Constants & Config ---
 marked.setOptions({
     highlight: function (code, lang) {
         if (lang && hljs.getLanguage(lang)) {
@@ -9,16 +9,15 @@ marked.setOptions({
     breaks: true
 });
 
-// --- Constants & State ---
 let sessionId = localStorage.getItem('sessionId') || generateUUID();
 let turboModeEnabled = localStorage.getItem('turboModeEnabled') === 'true';
-let attachedImages = []; // Stores base64 strings
+let attachedImages = [];
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log("AuditPartnership Bot: Initializing...");
+// --- Page Load ---
+document.addEventListener('DOMContentLoaded', () => {
+    localStorage.setItem('sessionId', sessionId);
 
-    // DOM Elements
+    // Elements
     const chatHistory = document.getElementById('chat-history');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -30,16 +29,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filePreviews = document.getElementById('file-previews');
     const sidebarChats = document.getElementById('sidebar-chats');
     const newChatBtn = document.getElementById('new-chat-sidebar-btn');
-    const statusDiv = document.getElementById('connection-status');
+    const statusTag = document.getElementById('connection-status');
     const errorDiv = document.getElementById('error-display');
 
-    // Persistence
-    localStorage.setItem('sessionId', sessionId);
+    // UI Updates
     updateTurboUI();
     updateSidebar();
 
-    // --- Event Listeners ---
-
+    // Event Listeners
     if (turboToggle) {
         turboToggle.addEventListener('click', () => {
             turboModeEnabled = !turboModeEnabled;
@@ -66,88 +63,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (uploadBtn) uploadBtn.addEventListener('click', () => fileInput.click());
     if (fileInput) fileInput.addEventListener('change', handleFileSelect);
     if (newChatBtn) newChatBtn.addEventListener('click', resetSession);
-    if (modelSelect) {
-        modelSelect.addEventListener('change', () => {
-            localStorage.setItem('selectedModel', modelSelect.value);
-            // Re-enable send button if we switch to a valid model
-            if (modelSelect.value && sendBtn) sendBtn.disabled = false;
-        });
-    }
 
-    // --- Core Functions ---
+    // --- Core Logic ---
 
     async function loadModels() {
-        console.log("AuditPartnership Bot: Fetching models...");
-        if (!modelSelect) return;
-
-        const savedModel = localStorage.getItem('selectedModel');
-        modelSelect.disabled = true;
-        if (sendBtn) sendBtn.disabled = true;
-
         try {
-            // Using a controller to handle timeouts
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-            const res = await fetch('/api/models', { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (!res.ok) throw new Error(`Fetch failed with status ${res.status}`);
+            const res = await fetch('/api/models');
             const data = await res.json();
-
             if (data.models && data.models.length > 0) {
+                const saved = localStorage.getItem('selectedModel');
                 modelSelect.innerHTML = data.models.map(m => {
-                    let isSelected = (savedModel && m === savedModel) || (!savedModel && m.includes('llama3.1:8b'));
-                    return `<option value="${m}" ${isSelected ? 'selected' : ''}>${m}</option>`;
+                    const sel = (saved && m === saved) || (!saved && m.includes('llama3.1:8b'));
+                    return `<option value="${m}" ${sel ? 'selected' : ''}>${m}</option>`;
                 }).join('');
-                console.log(`AuditPartnership Bot: Loaded ${data.models.length} models.`);
-            } else {
-                modelSelect.innerHTML = '<option value="">No models available</option>';
             }
-        } catch (err) {
-            console.error("AuditPartnership Bot: loadModels Error:", err);
-            showError("Failed to load models. Check if server is reachable.");
-            modelSelect.innerHTML = '<option value="">Fetch Failed</option>';
-        } finally {
-            modelSelect.disabled = false;
-            // Enable send button if we have a valid selected model
-            if (modelSelect.value && modelSelect.value !== "") {
-                if (sendBtn) sendBtn.disabled = false;
-            }
-        }
+        } catch (e) { console.error("Model fetch failed", e); }
     }
 
     async function checkHealth() {
-        if (!statusDiv) return;
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-            const res = await fetch('/health', { signal: controller.signal });
-            clearTimeout(timeoutId);
+            const res = await fetch('/health');
             const data = await res.json();
-
             if (data.ollama_connected) {
                 updateStatus("Online", "success");
             } else {
                 updateStatus("Ollama Offline", "error");
             }
-        } catch (e) {
-            console.warn("AuditPartnership Bot: health check failed", e);
-            updateStatus("Connection Lost", "error");
-        }
+        } catch (e) { updateStatus("Connection Lost", "error"); }
     }
-
-    // Initialize after defining functions
-    try {
-        await checkHealth();
-        await loadModels();
-        setInterval(checkHealth, 30000);
-    } catch (err) {
-        console.error("AuditPartnership Bot: Initialization failed", err);
-    }
-
-    // --- Chat Logic ---
 
     async function sendMessage() {
         const text = userInput.value.trim();
@@ -184,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error(`Server returned ${response.status}`);
+            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -238,10 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderPreview(src, index) {
         const div = document.createElement('div');
         div.className = 'preview-item';
-        div.innerHTML = `
-            <img src="${src}">
-            <button class="remove-preview" data-index="${index}"><i class="ri-close-line"></i></button>
-        `;
+        div.innerHTML = `<img src="${src}"><button class="remove-preview" data-index="${index}"><i class="ri-close-line"></i></button>`;
         div.querySelector('.remove-preview').onclick = function () {
             const idx = parseInt(this.dataset.index);
             attachedImages.splice(idx, 1);
@@ -296,31 +236,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.querySelectorAll('pre').forEach((pre) => {
             if (pre.dataset.processed) return;
             pre.dataset.processed = 'true';
-            const codeBlock = pre.querySelector('code');
-            if (!codeBlock) return;
+            const code = pre.querySelector('code');
+            if (!code) return;
             let lang = 'code';
-            const langClass = Array.from(codeBlock.classList).find(c => c.startsWith('language-'));
-            if (langClass) lang = langClass.replace('language-', '');
+            const cls = Array.from(code.classList).find(c => c.startsWith('language-'));
+            if (cls) lang = cls.replace('language-', '');
             const header = document.createElement('div');
             header.className = 'code-header';
             header.innerHTML = `<span class="lang-label">${lang.toUpperCase()}</span><button class="copy-btn-new"><i class="ri-clipboard-line"></i> Copy</button>`;
-            const btn = header.querySelector('.copy-btn-new');
-            btn.onclick = () => copyCode(codeBlock.textContent, btn);
+            header.querySelector('.copy-btn-new').onclick = function () { copyCode(code.textContent, this); };
             pre.parentNode.insertBefore(header, pre);
-            hljs.highlightElement(codeBlock);
+            hljs.highlightElement(code);
         });
     }
 
     async function copyCode(code, btn) {
-        let success = false;
-        if (navigator.clipboard) try { await navigator.clipboard.writeText(code); success = true; } catch (e) { }
-        if (!success) {
-            const ta = document.createElement('textarea');
-            ta.value = code; document.body.appendChild(ta);
-            ta.select(); success = document.execCommand('copy');
-            document.body.removeChild(ta);
+        let ok = false;
+        if (navigator.clipboard) try { await navigator.clipboard.writeText(code); ok = true; } catch (e) { }
+        if (!ok) {
+            const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta);
+            ta.select(); ok = document.execCommand('copy'); document.body.removeChild(ta);
         }
-        if (success) {
+        if (ok) {
             btn.innerHTML = '<i class="ri-check-line"></i> Copied!';
             setTimeout(() => btn.innerHTML = '<i class="ri-clipboard-line"></i> Copy', 2000);
         }
@@ -350,9 +287,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function saveToSidebar() {
         const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-        const firstUserMsg = chatHistory.querySelector('.message.user .message-text')?.innerText || "New Conversation";
+        const first = chatHistory.querySelector('.message.user .message-text')?.innerText || "New Conversation";
         if (!history.find(h => h.id === sessionId)) {
-            history.push({ id: sessionId, title: firstUserMsg.substring(0, 30) + (firstUserMsg.length > 30 ? "..." : "") });
+            history.push({ id: sessionId, title: first.substring(0, 30) + (first.length > 30 ? "..." : "") });
             localStorage.setItem('chatHistory', JSON.stringify(history));
         }
         updateSidebar();
@@ -365,46 +302,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         chatHistory.innerHTML = `<div class="message assistant"><div class="avatar"><i class="ri-shield-user-fill"></i></div><div class="content"><p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p></div></div>`;
         clearPreviews();
     }
-    window.resetSession = resetSession;
-    window.refreshModels = loadModels;
-
-    function generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0;
-            return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-        });
-    }
-
-    function showError(m) {
-        if (errorDiv) {
-            errorDiv.style.display = 'block'; errorDiv.textContent = m;
-            setTimeout(() => { errorDiv.style.display = 'none'; }, 8000);
-        }
-    }
 
     function updateStatus(msg, type = 'info') {
-        if (!statusDiv) return;
-        statusDiv.textContent = msg;
-        statusDiv.className = `status-tag status-${type}`;
-        if (type === 'error') statusDiv.style.background = '#ef4444';
-        else if (type === 'success') statusDiv.style.background = '#10b981';
-        else statusDiv.style.background = 'rgba(240, 223, 24, 0.1)';
+        if (!statusTag) return;
+        statusTag.textContent = msg;
+        statusTag.style.background = (type === 'success') ? '#10b981' : (type === 'error' ? '#ef4444' : 'rgba(240, 223, 24, 0.1)');
+        statusTag.style.color = (type === 'info') ? 'var(--primary-color)' : 'white';
     }
 
+    // Startup
+    checkHealth();
+    loadModels();
+    setInterval(checkHealth, 30000);
     checkAndShowPrivacyModal();
 });
 
-// Privacy Modal Logic
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
 async function checkAndShowPrivacyModal() {
-    const privacyModal = document.getElementById('privacy-modal');
-    if (!privacyModal || localStorage.getItem('privacyAccepted')) return;
+    const modal = document.getElementById('privacy-modal');
+    if (!modal || localStorage.getItem('privacyAccepted')) return;
     try {
         const res = await fetch('/api/config');
         const config = await res.json();
-        if (config.is_cloud) privacyModal.style.display = 'flex';
+        if (config.is_cloud) modal.style.display = 'flex';
     } catch (e) { }
-    document.getElementById('privacy-accept')?.addEventListener('click', () => {
+    document.getElementById('privacy-accept')?.onclick = () => {
         localStorage.setItem('privacyAccepted', 'true');
-        privacyModal.style.display = 'none';
-    });
+        modal.style.display = 'none';
+    };
 }
