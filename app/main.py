@@ -65,6 +65,16 @@ async def get_models():
     models = await ollama_client.get_models()
     return {"models": models}
 
+@app.get("/api/config")
+async def get_config():
+    """Return configuration info including whether this is a cloud deployment"""
+    is_cloud = not any(host in OLLAMA_HOST for host in ["localhost", "127.0.0.1", "0.0.0.0"])
+    return {
+        "is_cloud": is_cloud,
+        "ollama_host": OLLAMA_HOST
+    }
+
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     print(f"Incoming Chat Request: {request.model} | Mode: {request.role_mode} | Session: {request.session_id}")

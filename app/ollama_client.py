@@ -36,15 +36,43 @@ class OllamaClient:
                                     if content:
                                         yield content
                                 if data.get("done", False):
+                                    eval_count = data.get("eval_count", 0)
+                                    eval_duration = data.get("eval_duration", 1)  # avoid div by zero
+                                    if eval_count > 0:
+                                        tps = eval_count / (eval_duration / 1e9)
+                                        metadata = {
+                                            "tps": round(tps, 2),
+                                            "tokens": eval_count,
+                                            "duration_s": round(eval_duration / 1e9, 2)
+                                        }
+                                        yield f"__METADATA__{json.dumps(metadata)}"
+                                    
                                     print(f"  [OllamaClient] Stream done.")
                                     break
                             except json.JSONDecodeError:
                                 logger.error(f"Failed to decode JSON: {line}")
                                 continue
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            print(f"  [OllamaClient] HTTP ERROR {status_code}: {e}")
+            
+            if status_code == 401:
+                logger.error(f"Unauthorized access to Ollama at {self.base_url}")
+                yield "Error: Unauthorized access to AI service. Please check your authentication credentials."
+            elif status_code == 403:
+                logger.error(f"Forbidden access to Ollama at {self.base_url}")
+                yield "Error: Access forbidden. You don't have permission to use this AI service."
+            else:
+                logger.error(f"HTTP error {status_code}: {e}")
+                yield f"Error: Service returned HTTP {status_code}. Please contact support."
         except httpx.ConnectError:
             print(f"  [OllamaClient] CONNECTION ERROR to {self.base_url}")
             logger.error(f"Could not connect to Ollama at {self.base_url}")
-            yield "Error: Could not connect to Ollama. Is it running?"
+            yield "Error: Could not connect to AI service. Please check if the service is running."
+        except httpx.TimeoutException:
+            print(f"  [OllamaClient] TIMEOUT connecting to {self.base_url}")
+            logger.error(f"Timeout connecting to Ollama at {self.base_url}")
+            yield "Error: Connection timeout. The AI service is taking too long to respond."
         except Exception as e:
             print(f"  [OllamaClient] EXCEPTION: {e}")
             logger.error(f"An error occurred: {e}")
@@ -67,7 +95,19 @@ class OllamaClient:
                     return models
                 else:
                     logger.error(f"Failed to fetch models: {response.status_code} {response.text}")
+                    if response.status_code == 401:
+                        print(f"  [OllamaClient] Unauthorized access when fetching models")
+                    elif response.status_code == 403:
+                        print(f"  [OllamaClient] Forbidden access when fetching models")
                     return []
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching models: {e.response.status_code}")
+            print(f"  [OllamaClient] HTTP Error {e.response.status_code} fetching models")
+            return []
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error fetching models: {e}")
+            print(f"  [OllamaClient] Connection error fetching models")
+            return []
         except Exception as e:
             logger.error(f"Error fetching models: {e}")
             print(f"  [OllamaClient] Error fetching models: {e}")

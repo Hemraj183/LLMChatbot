@@ -231,12 +231,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
 
+            let metrics = null;
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
                 const chunk = decoder.decode(value);
-                fullResponse += chunk;
+
+                // Check for metadata
+                if (chunk.includes("__METADATA__")) {
+                    const parts = chunk.split("__METADATA__");
+                    fullResponse += parts[0]; // Content before metadata if any
+
+                    try {
+                        metrics = JSON.parse(parts[1]);
+                    } catch (e) {
+                        console.error("Failed to parse metadata", e);
+                    }
+                } else {
+                    fullResponse += chunk;
+                }
 
                 assistantContentDiv.innerHTML = marked.parse(fullResponse);
 
@@ -246,6 +261,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 addCopyButtonsToCodeBlocks(assistantContentDiv);
 
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+
+            // Append metrics if available
+            if (metrics) {
+                const metricsDiv = document.createElement('div');
+                metricsDiv.className = 'metrics';
+                metricsDiv.innerHTML = `${metrics.tps} tps | ${metrics.tokens} tokens | ${metrics.duration_s}s`;
+                assistantContentDiv.appendChild(metricsDiv);
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
 
@@ -346,17 +370,31 @@ document.addEventListener('DOMContentLoaded', () => {
     checkHealth();
     loadModels();
 
-    // Privacy Warning Modal
+    // Privacy Warning Modal - Only for Cloud Deployments
     const privacyModal = document.getElementById('privacy-modal');
     const privacyAccept = document.getElementById('privacy-accept');
     const hasAcceptedPrivacy = localStorage.getItem('privacyAccepted');
 
-    // Show modal on first visit or if not previously accepted
-    if (!hasAcceptedPrivacy) {
-        if (privacyModal) {
-            privacyModal.style.display = 'flex';
+    // Check if this is a cloud deployment and show modal accordingly
+    async function checkAndShowPrivacyModal() {
+        try {
+            const response = await fetch('/api/config');
+            const config = await response.json();
+
+            // Only show privacy modal for cloud deployments
+            if (config.is_cloud && !hasAcceptedPrivacy) {
+                if (privacyModal) {
+                    privacyModal.style.display = 'flex';
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to check cloud status:', err);
+            // Default to not showing modal if we can't determine cloud status
         }
     }
+
+    // Call the function on load
+    checkAndShowPrivacyModal();
 
     // Handle privacy acceptance
     if (privacyAccept) {
