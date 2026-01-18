@@ -72,6 +72,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Core Functions ---
 
+    // Save model selection
+    if (modelSelect) {
+        modelSelect.addEventListener('change', () => {
+            localStorage.setItem('selectedModel', modelSelect.value);
+        });
+    }
+
+    async function loadModels() {
+        if (!modelSelect) return;
+        const savedModel = localStorage.getItem('selectedModel');
+
+        // Disable UI while loading
+        modelSelect.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+
+        try {
+            const res = await fetch('/api/models');
+            const data = await res.json();
+
+            if (data.models && data.models.length > 0) {
+                modelSelect.innerHTML = data.models.map(m => {
+                    // Try to select in priority: Saved -> llama3.1:8b -> first
+                    let selected = false;
+                    if (savedModel && m === savedModel) selected = true;
+                    else if (!savedModel && m.includes('llama3.1:8b')) selected = true;
+
+                    return `<option value="${m}" ${selected ? 'selected' : ''}>${m}</option>`;
+                }).join('');
+                modelSelect.disabled = false;
+                if (sendBtn) sendBtn.disabled = false;
+            } else {
+                modelSelect.innerHTML = '<option value="">No models available</option>';
+            }
+        } catch (e) {
+            console.error("Failed to load models", e);
+            showError("Failed to reach models. Check your connection.");
+        } finally {
+            // Ensure send button is enabled if we have at least one valid model
+            if (modelSelect.value) {
+                if (sendBtn) sendBtn.disabled = false;
+            }
+        }
+    }
+    window.refreshModels = loadModels;
+    loadModels();
+
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text && attachedImages.length === 0) return;
@@ -274,23 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
         turboToggle.classList.toggle('active', turboModeEnabled);
         turboToggle.style.color = turboModeEnabled ? 'var(--primary-color)' : '';
     }
-
-    async function loadModels() {
-        try {
-            const res = await fetch('/api/models');
-            const data = await res.json();
-            if (data.models && data.models.length > 0) {
-                modelSelect.innerHTML = data.models.map(m => `<option value="${m}" ${m.includes('llama3.1:8b') ? 'selected' : ''}>${m}</option>`).join('');
-            } else {
-                modelSelect.innerHTML = '<option value="">No models available</option>';
-            }
-        } catch (e) {
-            console.error("Failed to load models", e);
-            showError("Failed to reach models. Check your connection.");
-        }
-    }
-    window.refreshModels = loadModels;
-    loadModels();
 
     function updateSidebar() {
         const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
