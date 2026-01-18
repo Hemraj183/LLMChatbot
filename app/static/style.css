@@ -136,6 +136,27 @@ body {
     color: var(--text-primary);
 }
 
+.icon-btn.active i {
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-yellow {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px var(--primary-color));
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 8px var(--primary-color));
+    }
+
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px var(--primary-color));
+    }
+}
+
 /* Brand */
 .brand {
     display: flex;

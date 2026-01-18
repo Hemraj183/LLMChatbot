@@ -29,8 +29,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelSelect = document.getElementById('model-select');
     const roleSelect = document.getElementById('role-select');
     const resetBtn = document.querySelector('button[title="New Chat"]'); // Access by attribute
+    const turboToggle = document.getElementById('turbo-toggle');
+
+    let turboModeEnabled = localStorage.getItem('turboModeEnabled') === 'true';
+    updateTurboUI();
 
     // --- Event Listeners ---
+
+    // Turbo Mode Toggle
+    if (turboToggle) {
+        turboToggle.addEventListener('click', () => {
+            turboModeEnabled = !turboModeEnabled;
+            localStorage.setItem('turboModeEnabled', turboModeEnabled);
+            updateTurboUI();
+        });
+    }
+
+    function updateTurboUI() {
+        if (!turboToggle) return;
+        if (turboModeEnabled) {
+            turboToggle.classList.add('active');
+            turboToggle.style.color = 'var(--primary-color)';
+            turboToggle.style.textShadow = '0 0 10px var(--primary-glow)';
+        } else {
+            turboToggle.classList.remove('active');
+            turboToggle.style.color = '';
+            turboToggle.style.textShadow = '';
+        }
+    }
+
+    // Send Button
 
     // Send Button
     if (sendBtn) {
@@ -215,15 +243,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const model = modelSelect.value;
             const role = roleSelect ? roleSelect.value : "general";
 
+            const payload = {
+                message: text,
+                model: model,
+                role_mode: role,
+                session_id: sessionId
+            };
+
+            if (turboModeEnabled) {
+                payload.options = {
+                    num_gpu: -1,      // Force all layers to GPU
+                    num_thread: 16,   // Optimize for multi-core DGX
+                    num_ctx: 4096     // Ensure consistent context
+                };
+            }
+
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: text,
-                    model: model,
-                    role_mode: role,
-                    session_id: sessionId
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) throw new Error('Network response was not ok');

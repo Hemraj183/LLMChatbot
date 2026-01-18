@@ -10,7 +10,7 @@ class OllamaClient:
     def __init__(self, base_url="http://localhost:11434"):
         self.base_url = base_url
 
-    async def chat_stream(self, model: str, messages: list):
+    async def chat_stream(self, model: str, messages: list, options: dict = None):
         """
         Streams chat responses from Ollama.
         """
@@ -20,6 +20,9 @@ class OllamaClient:
             "messages": messages,
             "stream": True
         }
+        
+        if options:
+            payload["options"] = options
 
         print(f"  [OllamaClient] Connecting to {url} with model {model}...")
         try:

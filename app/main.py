@@ -40,6 +40,7 @@ class ChatRequest(BaseModel):
     model: str = "llama3.1:8b" 
     role_mode: str = "general" # general, data_engineer
     session_id: Optional[str] = None
+    options: Optional[dict] = None
 
 SYSTEM_PROMPTS = {
     "general": "You are a helpful AI assistant.",
@@ -107,8 +108,8 @@ async def chat_endpoint(request: ChatRequest):
     async def response_generator():
         full_response = ""
         # stream from ollama
-        print(f"  [DEBUG] Calling ollama_client.chat_stream...")
-        async for chunk in ollama_client.chat_stream(request.model, messages):
+        print(f"  [DEBUG] Calling ollama_client.chat_stream with options: {request.options}")
+        async for chunk in ollama_client.chat_stream(request.model, messages, options=request.options):
             # print(f"  [DEBUG] Received chunk: {chunk[:20]}...") # Optional: too noisy
             full_response += chunk
             yield chunk
