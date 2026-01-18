@@ -57,14 +57,15 @@ body {
 /* Header */
 .chat-header {
     padding: 1rem 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(15, 17, 23, 0.8);
-    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 17, 23, 0.7);
+    backdrop-filter: blur(16px) saturate(180%);
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     z-index: 10;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -222,15 +223,17 @@ body {
 }
 
 .avatar {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     background: var(--surface-color);
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .message.user .avatar {
@@ -246,10 +249,10 @@ body {
 
 .content {
     flex: 1;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--text-primary);
     min-width: 0;
-    /* Prevents overflow */
+    padding-top: 4px;
 }
 
 /* User Message Bubble */
@@ -314,11 +317,62 @@ body {
 
 .content pre {
     background: #0d0d0d !important;
-    border-radius: 8px;
+    border-radius: 0 0 8px 8px;
+    /* Rounded bottom only because of header */
     padding: 1rem;
-    margin: 1rem 0;
+    margin: 0 0 1rem 0;
     overflow-x: auto;
     border: 1px solid #333;
+    border-top: none;
+    /* Connect to header */
+}
+
+/* Code Header */
+.code-header {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px 8px 0 0;
+    padding: 0.4rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-dm-sans);
+    margin-top: 1rem;
+}
+
+.lang-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+}
+
+.copy-btn-new {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 500;
+}
+
+.copy-btn-new:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.copy-btn-new.success {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.05);
 }
 
 .content pre code {
@@ -326,36 +380,6 @@ body {
     padding: 0;
     color: inherit;
     font-size: 0.9rem;
-}
-
-/* Copy Button for Code Blocks */
-.copy-btn {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-secondary);
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    z-index: 1;
-}
-
-.copy-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: var(--text-primary);
-    transform: scale(1.05);
-}
-
-.copy-btn i {
-    font-size: 1rem;
 }
 
 /* Input Area */

@@ -88,44 +88,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Functions ---
 
-    // Add copy buttons to code blocks
+    // Add copy buttons and headers to code blocks
     function addCopyButtonsToCodeBlocks(container) {
         container.querySelectorAll('pre').forEach((pre) => {
-            // Avoid adding multiple copy buttons
-            if (pre.querySelector('.copy-btn')) return;
+            // Avoid processing multiple times
+            if (pre.dataset.processed) return;
+            pre.dataset.processed = 'true';
 
             const codeBlock = pre.querySelector('code');
             if (!codeBlock) return;
 
+            // Detect language
+            let lang = 'code';
+            const classes = codeBlock.className.split(' ');
+            const langClass = classes.find(c => c.startsWith('language-'));
+            if (langClass) {
+                lang = langClass.replace('language-', '');
+            }
+
+            // Create Header
+            const header = document.createElement('div');
+            header.className = 'code-header';
+
+            const langLabel = document.createElement('span');
+            langLabel.className = 'lang-label';
+            langLabel.textContent = lang.toUpperCase();
+
             const button = document.createElement('button');
-            button.className = 'copy-btn';
-            button.innerHTML = '<i class="ri-clipboard-line"></i>';
+            button.className = 'copy-btn-new';
+            button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
             button.title = 'Copy code';
 
             button.addEventListener('click', async () => {
                 const code = codeBlock.textContent;
-                try {
-                    await navigator.clipboard.writeText(code);
-                    button.innerHTML = '<i class="ri-check-line"></i>';
-                    button.style.background = 'rgba(34, 197, 94, 0.2)';
-                    button.style.color = '#22c55e';
+                let success = false;
 
+                // Primary Method: Navigator Clipboard
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    try {
+                        await navigator.clipboard.writeText(code);
+                        success = true;
+                    } catch (err) {
+                        console.warn('Navigator clipboard failed, trying fallback.', err);
+                    }
+                }
+
+                // Fallback Method: Textarea Hack (Works in insecure contexts/HTTP)
+                if (!success) {
+                    try {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = code;
+                        // Avoid scrolling to bottom
+                        textArea.style.top = "0";
+                        textArea.style.left = "0";
+                        textArea.style.position = "fixed";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        success = document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                    }
+                }
+
+                if (success) {
+                    button.innerHTML = '<i class="ri-check-line"></i> Copied!';
+                    button.classList.add('success');
                     setTimeout(() => {
-                        button.innerHTML = '<i class="ri-clipboard-line"></i>';
-                        button.style.background = '';
-                        button.style.color = '';
+                        button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
+                        button.classList.remove('success');
                     }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy:', err);
-                    button.innerHTML = '<i class="ri-error-warning-line"></i>';
+                } else {
+                    button.innerHTML = '<i class="ri-error-warning-line"></i> Error';
                     setTimeout(() => {
-                        button.innerHTML = '<i class="ri-clipboard-line"></i>';
+                        button.innerHTML = '<i class="ri-clipboard-line"></i> Copy';
                     }, 2000);
                 }
             });
 
-            pre.style.position = 'relative';
-            pre.appendChild(button);
+            header.appendChild(langLabel);
+            header.appendChild(button);
+
+            pre.parentNode.insertBefore(header, pre);
         });
     }
 
