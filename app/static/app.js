@@ -393,6 +393,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatus("Connection Lost", "error");
         }
     }
+
+    // Initial checks
+    checkHealth();
+    loadModels();
     setInterval(checkHealth, 30000); // Check every 30s
 
     checkAndShowPrivacyModal();
