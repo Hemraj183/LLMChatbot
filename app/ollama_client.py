@@ -7,8 +7,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class OllamaClient:
-    def __init__(self, base_url="http://localhost:11434"):
+    def __init__(self, base_url="http://localhost:11434", api_key=None):
         self.base_url = base_url
+        self.api_key = api_key
+        self.headers = {}
+        if self.api_key:
+            self.headers["Authorization"] = f"Bearer {self.api_key}"
+            print(f"  [OllamaClient] API Key detected, using Authorization header.")
 
     async def chat_stream(self, model: str, messages: list, options: dict = None, images: list = None):
         """
@@ -30,7 +35,7 @@ class OllamaClient:
 
         print(f"  [OllamaClient] Connecting to {url} with model {model}...")
         try:
-            async with httpx.AsyncClient(timeout=None) as client:
+            async with httpx.AsyncClient(timeout=None, headers=self.headers) as client:
                 async with client.stream("POST", url, json=payload) as response:
                     print(f"  [OllamaClient] Response Status: {response.status_code}")
                     response.raise_for_status()
@@ -91,7 +96,7 @@ class OllamaClient:
         """
         try:
             print(f"  [OllamaClient] Fetching models from {self.base_url}/api/tags...")
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=5.0, headers=self.headers) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
                 if response.status_code == 200:
                     data = response.json()
@@ -125,7 +130,7 @@ class OllamaClient:
         Checks if Ollama is reachable.
         """
         try:
-            async with httpx.AsyncClient(timeout=2.0) as client:
+            async with httpx.AsyncClient(timeout=2.0, headers=self.headers) as client:
                 response = await client.get(f"{self.base_url}/")
                 return response.status_code == 200
         except:

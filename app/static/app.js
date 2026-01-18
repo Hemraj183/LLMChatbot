@@ -28,11 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const filePreviews = document.getElementById('file-previews');
     const sidebarChats = document.getElementById('sidebar-chats');
     const newChatBtn = document.getElementById('new-chat-sidebar-btn');
+    const statusDiv = document.getElementById('connection-status');
+    const errorDiv = document.getElementById('error-display');
 
     // Persistence
     localStorage.setItem('sessionId', sessionId);
     updateTurboUI();
     updateSidebar();
+    checkHealth(); // Start health polling
 
     // --- Event Listeners ---
 
@@ -105,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -133,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToSidebar(); // Update sidebar with new conversation context
 
         } catch (err) {
-            assistantContentDiv.innerHTML = `<div class="error-box"><strong>Error:</strong> ${err.message}</div>`;
+            assistantContentDiv.innerHTML = `<div class="error-box"><strong>Error:</strong> ${err.message}<br><small>Is the AI service running?</small></div>`;
         } finally {
             sendBtn.disabled = false;
             userInput.focus();
@@ -276,8 +279,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch('/api/models');
             const data = await res.json();
-            modelSelect.innerHTML = (data.models || []).map(m => `<option value="${m}" ${m.includes('llama3.1:8b') ? 'selected' : ''}>${m}</option>`).join('');
-        } catch (e) { showError("Failed to reach models."); }
+            if (data.models && data.models.length > 0) {
+                modelSelect.innerHTML = data.models.map(m => `<option value="${m}" ${m.includes('llama3.1:8b') ? 'selected' : ''}>${m}</option>`).join('');
+            } else {
+                modelSelect.innerHTML = '<option value="">No models available</option>';
+            }
+        } catch (e) {
+            console.error("Failed to load models", e);
+            showError("Failed to reach models. Check your connection.");
+        }
     }
     window.refreshModels = loadModels;
     loadModels();
@@ -288,17 +298,16 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebarChats.innerHTML = '<div class="sidebar-empty">No conversations yet</div>';
             return;
         }
-        sidebarChats.innerHTML = history.reverse().map(h => `
+        sidebarChats.innerHTML = [...history].reverse().map(h => `
             <div class="sidebar-item" title="${h.title}">${h.title}</div>
         `).join('');
     }
 
     function saveToSidebar() {
-        // Simple logic for sidebar items
         const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
         const firstUserMsg = chatHistory.querySelector('.message.user .message-text')?.innerText || "New Conversation";
         if (!history.find(h => h.id === sessionId)) {
-            history.push({ id: sessionId, title: firstUserMsg.substring(0, 30) + "..." });
+            history.push({ id: sessionId, title: firstUserMsg.substring(0, 30) + (firstUserMsg.length > 30 ? "..." : "") });
             localStorage.setItem('chatHistory', JSON.stringify(history));
         }
         updateSidebar();
@@ -311,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.innerHTML = `
             <div class="message assistant">
                 <div class="avatar"><i class="ri-shield-user-fill"></i></div>
-                <div class="content"><p>Hello! How can I assist you today?</p></div>
+                <div class="content"><p>Hello! I am the AuditPartnership Bot running locally on the DGX server. How can I assist you today?</p></div>
             </div>
         `;
         clearPreviews();
@@ -326,9 +335,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showError(m) {
-        const err = document.getElementById('error-display');
-        if (err) { err.style.display = 'block'; err.textContent = m; }
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = m;
+            setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+        }
     }
+
+    function updateStatus(msg, type = 'info') {
+        if (!statusDiv) return;
+        statusDiv.textContent = msg;
+        statusDiv.className = `status-tag status-${type}`;
+        if (type === 'error') statusDiv.style.background = '#ef4444';
+        else if (type === 'success') statusDiv.style.background = '#10b981';
+        else statusDiv.style.background = 'rgba(240, 223, 24, 0.1)';
+    }
+
+    async function checkHealth() {
+        try {
+            const res = await fetch('/health');
+            const data = await res.json();
+            if (data.ollama_connected) {
+                updateStatus("Online", "success");
+            } else {
+                updateStatus("Ollama Offline", "error");
+            }
+        } catch (e) {
+            updateStatus("Connection Lost", "error");
+        }
+    }
+    setInterval(checkHealth, 30000); // Check every 30s
 
     checkAndShowPrivacyModal();
 });

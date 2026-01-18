@@ -29,7 +29,8 @@ templates = Jinja2Templates(directory="app/templates")
 
 # Ollama Client
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-ollama_client = OllamaClient(base_url=OLLAMA_HOST)
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY") # Optional for cloud auth
+ollama_client = OllamaClient(base_url=OLLAMA_HOST, api_key=OLLAMA_API_KEY)
 
 # In-memory session storage
 # structure: {session_id: [{"role": "user", "content": "..."}, ...]}
